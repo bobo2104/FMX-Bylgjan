@@ -1,0 +1,2082 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>FMX Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+<style>
+:root{
+  --bg:#09090c;--s1:#111115;--s2:#18181e;--s3:#202028;
+  --b1:#2a2a36;--b2:#38384a;
+  --t1:#f0f0f8;--t2:#9090b0;--t3:#55556a;
+  --blue:#4e8fff;--green:#3fd68a;--amber:#f5a623;--red:#ff5252;--purple:#a78bfa;
+  --mono:'IBM Plex Mono',monospace;--sans:'Sora',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── Homepage ─────────────────────────────────────────────────── */
+#homepage{
+  position:fixed;inset:0;z-index:1000;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;overflow:hidden;
+}
+#homepage::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 60% at 50% 40%, rgba(78,143,255,.07) 0%, transparent 70%),
+             radial-gradient(ellipse 40% 40% at 80% 80%, rgba(63,214,138,.05) 0%, transparent 60%);
+  pointer-events:none;
+}
+.hp-grid{
+  position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
+  background-size:40px 40px;
+  mask-image:radial-gradient(ellipse 70% 70% at 50% 50%,black 0%,transparent 100%);
+  pointer-events:none;
+}
+.hp-badge{
+  font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--blue);border:1px solid rgba(78,143,255,.3);border-radius:20px;
+  padding:4px 14px;margin-bottom:28px;
+  background:rgba(78,143,255,.07);
+  animation:fadeUp .6s ease both;
+}
+.hp-logo{
+  display:flex;align-items:center;gap:14px;margin-bottom:16px;
+  animation:fadeUp .6s .1s ease both;
+}
+.hp-logo-icon{
+  width:52px;height:52px;
+  background:linear-gradient(135deg,var(--blue),#7b5fff);
+  border-radius:14px;display:flex;align-items:center;justify-content:center;
+  font-size:24px;box-shadow:0 8px 32px rgba(78,143,255,.3);
+}
+.hp-logo-text{font-size:32px;font-weight:700;letter-spacing:-1px;color:var(--t1)}
+.hp-logo-text span{color:var(--blue)}
+.hp-sub{
+  font-size:14px;color:var(--t2);margin-bottom:52px;text-align:center;line-height:1.6;
+  animation:fadeUp .6s .2s ease both;
+}
+.hp-cards{
+  display:flex;gap:16px;flex-wrap:wrap;justify-content:center;
+  animation:fadeUp .6s .3s ease both;
+}
+.hp-card{
+  width:200px;background:var(--s1);border:1px solid var(--b1);border-radius:14px;
+  padding:24px 20px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;
+  text-align:center;
+}
+.hp-card::before{
+  content:'';position:absolute;inset:0;opacity:0;transition:opacity .2s;
+}
+.hp-card:hover{border-color:var(--blue);transform:translateY(-3px);box-shadow:0 12px 40px rgba(78,143,255,.15)}
+.hp-card:hover::before{opacity:1;background:radial-gradient(ellipse at 50% 0%,rgba(78,143,255,.08),transparent 70%)}
+.hp-card-icon{font-size:28px;margin-bottom:12px}
+.hp-card-name{font-size:14px;font-weight:600;color:var(--t1);margin-bottom:4px}
+.hp-card-desc{font-size:11px;color:var(--t3);line-height:1.5}
+.hp-card-soon{
+  position:absolute;top:10px;right:10px;
+  font-size:8px;font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;
+  color:var(--amber);border:1px solid rgba(245,166,35,.3);border-radius:10px;padding:2px 6px;
+  background:rgba(245,166,35,.08);
+}
+.hp-footer{
+  position:absolute;bottom:24px;
+  font-size:10px;color:var(--t3);font-family:var(--mono);
+  animation:fadeUp .6s .4s ease both;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+#homepage.hide{animation:fadeOut .35s ease forwards}
+@keyframes fadeOut{to{opacity:0;pointer-events:none;visibility:hidden}}
+/* topbar */
+.topbar{height:48px;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 18px;gap:12px;flex-shrink:0}
+.brand{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.icon{width:26px;height:26px;background:linear-gradient(135deg,var(--blue),#7b5fff);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.vdiv{width:1px;height:20px;background:var(--b1)}
+.sub{font-size:11px;color:var(--t3);font-family:var(--mono)}
+.acts{margin-left:auto;display:flex;gap:6px}
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:7px;border:none;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:500;transition:all .15s;white-space:nowrap}
+.bp{background:var(--blue);color:#fff}.bp:hover{background:#3a7aee}
+.bo{background:transparent;color:var(--t1);border:1px solid var(--b2)}.bo:hover{border-color:var(--blue);color:var(--blue)}
+.bg2{background:rgba(63,214,138,.12);color:var(--green);border:1px solid rgba(63,214,138,.2)}.bg2:hover{background:rgba(63,214,138,.2)}
+.ba{background:rgba(245,166,35,.1);color:var(--amber);border:1px solid rgba(245,166,35,.2)}.ba:hover{background:rgba(245,166,35,.2)}
+.bpu{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.2)}.bpu:hover{background:rgba(167,139,250,.2)}
+/* layout */
+.workspace{display:grid;grid-template-columns:345px 1fr;flex:1;min-height:0;overflow:hidden}
+/* form */
+.formpanel{overflow-y:auto;border-right:1px solid var(--b1);display:flex;flex-direction:column;gap:1px;background:var(--b1)}
+.block{background:var(--s1);padding:14px}
+.bh{font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--t3);margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.pip{width:5px;height:5px;border-radius:50%;background:var(--blue)}
+.fld{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.fld:last-child{margin-bottom:0}
+.fld label{font-size:10px;color:var(--t2);font-weight:500}
+.fld input,.fld select{background:var(--s2);border:1px solid var(--b1);border-radius:6px;color:var(--t1);font-family:var(--sans);font-size:12px;padding:6px 9px;outline:none;transition:border .12s;width:100%}
+.fld input:focus,.fld select:focus{border-color:var(--blue)}
+.fld input::placeholder{color:var(--t3)}
+.fld select option{background:var(--s2)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+/* ad cards */
+.adc{background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:10px;margin-bottom:6px;position:relative}
+.adc:last-child{margin-bottom:0}
+.abadge{position:absolute;top:8px;right:9px;font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:4px;font-weight:500}
+.arm{background:transparent;border:1px solid rgba(255,82,82,.25);color:var(--red);border-radius:5px;padding:3px 7px;font-size:10px;cursor:pointer;font-family:var(--sans);width:100%}
+.arm:hover{background:rgba(255,82,82,.08)}
+/* pct bar */
+.pbar{height:3px;border-radius:2px;background:var(--b1);overflow:hidden;margin-top:6px;margin-bottom:3px}
+.pbf{height:100%;border-radius:2px;transition:width .25s,background .25s}
+.plbl{font-size:10px;font-family:var(--mono);text-align:right}
+/* slot rows */
+.srow{display:flex;gap:4px;align-items:center;margin-bottom:4px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:4px 7px;flex-wrap:nowrap;min-width:0}
+.srow:last-child{margin-bottom:0}
+.si{background:transparent;border:none;color:var(--t1);font-family:var(--mono);font-size:10px;padding:0;outline:none;flex:0 0 88px;text-align:left}
+.sl2{background:transparent;border:none;outline:none;font-family:var(--sans);font-size:10px;color:var(--t2);flex:0 0 72px;min-width:0}
+.srm{background:none;border:none;color:var(--t3);cursor:pointer;font-size:13px;padding:0 1px;line-height:1;flex-shrink:0}
+.srm:hover{color:var(--red)}
+/* preview */
+.preview{overflow-y:scroll;padding:16px 20px;display:block}
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:10px;overflow:hidden;margin-bottom:11px}
+.ch{padding:8px 14px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:10px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--t3);display:flex;align-items:center;justify-content:space-between}
+.cb{padding:13px}
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:11px}
+.kpi{background:var(--s2);border:1px solid var(--b1);border-radius:7px;padding:8px 10px}
+.kpi .v{font-family:var(--mono);font-size:15px;font-weight:500;letter-spacing:-.5px;color:var(--blue)}
+.kpi .l{font-size:9px;color:var(--t3);margin-top:2px;letter-spacing:.3px;text-transform:uppercase}
+.kpi.warn .v{color:var(--amber)}.kpi.ok .v{color:var(--green)}
+/* table */
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{padding:5px 8px;background:var(--s2);color:var(--t3);font-size:9px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;text-align:left;border-bottom:1px solid var(--b1)}
+.tbl th.r{text-align:right}
+.tbl td{padding:5px 8px;border-bottom:1px solid var(--b1);font-family:var(--mono)}
+.tbl td.r{text-align:right}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr.frii td{color:var(--green);opacity:.85}
+.tbl tr.tot td{font-weight:600;color:var(--amber);background:rgba(245,166,35,.05);border-top:1px solid var(--b1)}
+.tbl tr.sep td{padding:1px;background:var(--b1)}
+/* airdate grid */
+.agrid{overflow-x:auto;max-height:380px;overflow-y:auto}
+.agrid table{border-collapse:collapse;font-size:10px;font-family:var(--mono);white-space:nowrap}
+.agrid th{position:sticky;top:0;z-index:2;padding:3px 4px;background:var(--s2);color:var(--t3);font-weight:500;border:1px solid var(--b1);min-width:24px;text-align:center}
+.agrid th.lbl{text-align:left;min-width:120px;background:var(--s3)}
+.agrid td{padding:2px 4px;border:1px solid var(--b1);text-align:center}
+.agrid td.lbl{text-align:left;color:var(--t2);background:var(--s2);padding:3px 8px}
+.agrid td.adhdr{color:var(--t1);font-weight:600;background:var(--s3)}
+.agrid td.spot{background:rgba(78,143,255,.22);color:var(--blue);font-weight:600}
+.agrid td.free{background:rgba(63,214,138,.15);color:var(--green)}
+.agrid td.wknd{opacity:.2}
+/* email */
+.ebody{padding:12px 14px;font-family:var(--mono);font-size:11px;color:var(--t2);white-space:pre-wrap;line-height:1.75}
+/* empty */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:8px;color:var(--t3)}
+.empty .ico{font-size:32px;opacity:.3}
+.empty p{font-size:12px}
+/* tabs */
+.tabbar{display:flex;align-items:center;gap:3px;padding:0 14px;background:var(--s1);border-bottom:1px solid var(--b1);height:36px;flex-shrink:0;overflow-x:auto}
+.tab{display:flex;align-items:center;gap:5px;padding:0 11px;height:28px;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none;cursor:pointer;font-size:11px;font-weight:500;color:var(--t3);white-space:nowrap;transition:all .12s;flex-shrink:0}
+.tab:hover{color:var(--t1);background:var(--s2)}
+.tab.active{color:var(--t1);background:var(--s2);border-color:var(--b1)}
+.tab .tcl{color:var(--t3);font-size:12px;margin-left:2px;line-height:1;opacity:.6}
+.tab .tcl:hover{color:var(--red);opacity:1}
+.tab-add{background:none;border:1px dashed var(--b2);color:var(--t3);border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;transition:all .12s;flex-shrink:0}
+.tab-add:hover{border-color:var(--blue);color:var(--blue)}
+
+/* mobile toggle button */
+#mob-toggle{display:none}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  body{overflow:auto;height:auto;min-height:100vh}
+
+  /* topbar: brand + hamburger only, hide action buttons */
+  .topbar{padding:0 12px;flex-wrap:nowrap;height:44px}
+  .vdiv,.sub{display:none}
+  .acts{display:none}
+  #mob-toggle{display:flex;align-items:center;justify-content:center;margin-left:auto;background:var(--s3);border:1px solid var(--b2);color:var(--t2);border-radius:7px;width:36px;height:30px;cursor:pointer;font-size:18px;flex-shrink:0}
+
+  /* tabs: scrollable, smaller */
+  .tabbar{height:32px;padding:0 8px;gap:2px}
+  .tab{padding:0 8px;height:24px;font-size:10px}
+
+  /* workspace: stacked */
+  .workspace{display:flex;flex-direction:column;overflow:visible;height:auto}
+
+  /* form panel: collapsible, full width */
+  .formpanel{width:100%;border-right:none;border-bottom:1px solid var(--b1);overflow:visible;max-height:0;overflow:hidden;transition:max-height .3s ease}
+  .formpanel.open{max-height:9999px}
+
+  /* preview: full width */
+  .preview{padding:10px;gap:8px}
+
+  /* mobile action bar under topbar */
+  #mob-actions{display:flex;gap:5px;padding:8px 12px;background:var(--s1);border-bottom:1px solid var(--b1);flex-wrap:wrap}
+  #mob-actions .btn{font-size:10px;padding:5px 9px;flex:1;justify-content:center;min-width:0}
+
+  /* tables: horizontal scroll */
+  .card > div{overflow-x:auto}
+  .tbl{min-width:500px}
+
+  /* kpis: 2 cols on mobile */
+  .kpis{grid-template-columns:repeat(2,1fr)}
+
+  /* slot rows: allow wrap */
+  .srow{flex-wrap:wrap}
+}
+
+/* show mob-actions only on mobile */
+#mob-actions{display:none}
+</style>
+</head>
+<body>
+
+<div id="homepage">
+  <div class="hp-grid"></div>
+  <div class="hp-badge">Áætlunartól · v1.0</div>
+  <div class="hp-logo">
+    <div class="hp-logo-icon">📻</div>
+    <div class="hp-logo-text">FMX <span>Planner</span></div>
+  </div>
+  <div class="hp-sub">Veldu tegund áætlunar til að hefja</div>
+  <div class="hp-cards">
+    <div class="hp-card" onclick="enterApp()">
+      <div class="hp-card-icon">📻</div>
+      <div class="hp-card-name">Útvarp</div>
+      <div class="hp-card-desc">Bylgjan · FMX<br>Spots, tímaslottar, kostnaður</div>
+    </div>
+    <div class="hp-card" style="opacity:.6;cursor:not-allowed">
+      <div class="hp-card-soon">Bráðlega</div>
+      <div class="hp-card-icon">📺</div>
+      <div class="hp-card-name">Sjónvarp</div>
+      <div class="hp-card-desc">RÚV · Stöð 2<br>Sjónvarpsáætlun</div>
+    </div>
+    <div class="hp-card" style="opacity:.6;cursor:not-allowed">
+      <div class="hp-card-soon">Bráðlega</div>
+      <div class="hp-card-icon">📱</div>
+      <div class="hp-card-name">Digital</div>
+      <div class="hp-card-desc">Social · Display<br>Stafrænar áætlanir</div>
+    </div>
+  </div>
+  <div class="hp-footer">FMX · Sýn · Bylgjan &nbsp;·&nbsp; Innra verkfæri</div>
+</div>
+
+<div id="topbar" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+<div class="topbar">
+  <div class="brand"><div class="icon">&#x1F4FB;</div>Útvarpáætlun</div>
+  <div class="vdiv"></div>
+  <div class="sub">Bylgjan &middot; FMX &middot; Syn</div>
+  <div class="acts">
+    <button class="btn bp"  onclick="genPontunar()">&#x2B07; Pontunarskjal (FMX/Syn)</button>
+    <button class="btn bpu" onclick="genAirdate()">&#x2B07; Airdate Excel</button>
+    <button class="btn bg2" onclick="genPDF()">&#x2B07; PDF vidskiptavinur</button>
+    <button class="btn ba"  onclick="copyEmail()">&#x2398; Tolvupostur</button>
+    <div style="width:1px;height:20px;background:var(--b2);margin:0 2px"></div>
+    <button class="btn" style="background:rgba(63,214,138,.15);color:var(--green);border:1px solid rgba(63,214,138,.35)" onclick="approveAndSend()">&#x2713; Samþykkja &amp; Senda</button>
+  </div>
+  <button id="mob-toggle" onclick="toggleMobForm()" title="Form">☰</button>
+  <button onclick="goHome()" style="background:transparent;border:1px solid var(--b2);color:var(--t2);border-radius:6px;padding:4px 10px;cursor:pointer;font-family:var(--sans);font-size:11px;margin-left:4px" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'" onmouseout="this.style.borderColor='var(--b2)';this.style.color='var(--t2)'">⌂ Forsíða</button>
+</div>
+<div id="mob-actions">
+  <button class="btn bp"  onclick="genPontunar()">&#x2B07; Pöntunarskjal</button>
+  <button class="btn bpu" onclick="genAirdate()">&#x2B07; Airdate</button>
+  <button class="btn bg2" onclick="genPDF()">&#x2B07; PDF</button>
+  <button class="btn ba"  onclick="copyEmail()">&#x2398; Tölvupóstur</button>
+</div>
+<div class="tabbar" id="tabbar"></div>
+<div id="master-bar" style="display:none;align-items:center;gap:10px;padding:5px 14px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:11px;flex-wrap:wrap">
+  <span style="color:var(--t3);font-size:9px;letter-spacing:.5px;text-transform:uppercase">Heildar</span>
+  <span id="master-total" style="font-family:var(--mono);color:var(--t1);font-weight:600"></span>
+  <div id="master-tabs-summary" style="display:flex;gap:6px;flex-wrap:wrap;margin-left:4px"></div>
+</div>
+
+<div class="workspace">
+<div class="formpanel">
+
+  <!-- Campaign info -->
+  <div class="block">
+    <div class="bh"><div class="pip"></div>Kampaniuupplysingar</div>
+    <div class="fld">
+      <label>Vidskiptavinur / kampania</label>
+      <input id="f-client" placeholder="Skírðu áætlun" oninput="refresh();syncTabName()">
+    </div>
+    <div class="g2">
+      <div class="fld"><label>Gerd</label>
+        <select id="f-type" onchange="refresh()">
+          <option value="Leikid">Leikid</option>
+          <option value="Lesid">Lesid</option>
+        </select>
+      </div>
+      <div class="fld"><label>Heildarfjárhagsáætlun (kr)</label>
+        <input id="f-budget" type="text" placeholder="200.000" oninput="fmtBudget(this);refresh();renderStations()" style="font-family:var(--mono)">
+      </div>
+    </div>
+    <div class="g2">
+      <div class="fld"><label>Hefst</label><input id="f-start" placeholder="dd/mm/yyyy" maxlength="10" oninput="dateTextInput(this)" onchange="refresh()"></div>
+      <div class="fld"><label>Endar</label><input id="f-end"   placeholder="dd/mm/yyyy" maxlength="10" oninput="dateTextInput(this)" onchange="refresh()"></div>
+    </div>
+  </div>
+
+  <!-- Stöðvar -->
+  <div class="block">
+    <div class="bh"><div class="pip" style="background:var(--blue)"></div>Stöðvar</div>
+    <div id="stations-list"></div>
+    <button class="btn bo" style="font-size:11px;padding:4px 9px;margin-top:8px" onclick="addStation()">+ Stöð</button>
+  </div>
+
+  <!-- Ads -->
+  <div class="block">
+    <div class="bh"><div class="pip" style="background:var(--green)"></div>Auglysingar</div>
+    <div id="ads-list"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+      <button class="btn bo" style="font-size:11px;padding:4px 9px" onclick="addAd()">+ Auglysing</button>
+      <div style="min-width:105px">
+        <div class="pbar"><div class="pbf" id="pct-fill"></div></div>
+        <div class="plbl" id="pct-lbl">0 / 100%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slots -->
+  <div class="block">
+    <div class="bh"><div class="pip" style="background:var(--amber)"></div>Timaslottar</div>
+    <div id="slots-list"></div>
+    <button class="btn bo" style="font-size:11px;padding:4px 9px;margin-top:8px" onclick="addSlot()">+ Slot</button>
+  </div>
+
+  <!-- Álag -->
+  <div class="block">
+    <div class="bh"><div class="pip" style="background:var(--red)"></div>Álag</div>
+
+    <div style="font-size:9px;color:var(--t3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Fréttir</div>
+    <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px" id="alag-frettir">
+      <!-- rendered by renderAlag() -->
+    </div>
+
+    <div style="font-size:9px;color:var(--t3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Árstíðir</div>
+    <div style="display:flex;flex-direction:column;gap:4px" id="alag-arstid">
+      <!-- rendered by renderAlag() -->
+    </div>
+  </div>
+
+</div><!-- /formpanel -->
+
+<div class="preview" id="preview">
+  <div class="empty"><div class="ico">&#x1F4CB;</div><p>Fylltu inn kampaniuupplysingar til ad sja aetlun</p></div>
+</div>
+</div><!-- /workspace -->
+</div><!-- /topbar wrapper -->
+
+<div id="toast"></div>
+
+<script>
+// ── Rates (kr per second, before discount) — Virkir / Lau / Sun ──
+const RATES = {
+  FMX: {
+    '07:00-09:00': {V:565,  L:null, S:null},
+    '09:15-11:15': {V:410,  L:410,  S:410 },
+    '11:45-13:00': {V:410,  L:410,  S:410 },
+    '13:15-15:45': {V:410,  L:410,  S:410 },
+    '16:00-18:30': {V:725,  L:410,  S:410 },
+    '19:00-00:00': {V:125,  L:125,  S:125 },
+    '00:00-06:00': {V:125,  L:125,  S:125 },
+  },
+  Bylgjan: {
+    '07:00-09:00': {V:1270, L:null, S:null},
+    '09:15-11:15': {V:950,  L:1055, S:950 },
+    '11:45-13:00': {V:1270, L:1270, S:1270},
+    '13:15-15:45': {V:950,  L:950,  S:950 },
+    '16:00-18:30': {V:1270, L:1270, S:1270},
+    '19:00-00:00': {V:245,  L:310,  S:310 },
+    '00:00-06:00': {V:245,  L:310,  S:310 },
+  }
+};
+
+// ── Rás 2: CPM-based rates (kr per CPM unit, i.e. cost = CPM × sek) ──
+// Leiknar auglýsingar — Virkir / Helgar
+const RAS2_RATES_LEIKNAR = {
+  '07:30-09:00': {V:16, H:6 },
+  '09:10-11:50': {V:9,  H:10},
+  '12:20-12:45': {V:25, H:25},
+  '13:10-15:30': {V:9,  H:10},
+  '15:55-17:30': {V:11, H:8 },
+  '17:00-18:00': {V:16, H:16},  // samkeyrt R1+R2
+  '19:00-19:00': {V:5,  H:5 },
+  '19:30-23:50': {V:2,  H:2 },
+};
+// Lesnar auglýsingar — Virkir / Helgar
+const RAS2_RATES_LESNAR = {
+  '07:30-09:00': {V:16, H:6 },
+  '10:00-11:00': {V:15, H:17},
+  '12:20-12:45': {V:22, H:24},
+  '14:00-15:00': {V:14, H:13},
+  '16:00-16:00': {V:15, H:13},
+  '17:00-18:00': {V:16, H:15},
+};
+// Slots fyrir Rás 2 (label → tími → CPM tafla)
+const RAS2_SLOTS = [
+  {time:'07:30-09:00', label:'Morgunn (R1+R2)',   samkeyrt:true },
+  {time:'09:10-11:50', label:'Fyrir hádegi',       samkeyrt:false},
+  {time:'12:20-12:45', label:'Hádegi (R1+R2)',     samkeyrt:true },
+  {time:'13:10-15:30', label:'Eftir hádegi',        samkeyrt:false},
+  {time:'15:55-17:30', label:'Síðdegi',             samkeyrt:false},
+  {time:'17:00-18:00', label:'Síðdegisfréttir (R1+R2)', samkeyrt:true},
+  {time:'19:30-23:50', label:'Kvöld (10% styrking)', frii:true     },
+];
+
+// Get CPM rate for Rás 2 slot — returns kr per second (CPM × 69)
+const RAS2_CPM_PRICE = 69; // Fljótandi verð
+function getRas2Rate(adtype, slotTime, date) {
+  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+  const table = (adtype === 'Lesid') ? RAS2_RATES_LESNAR : RAS2_RATES_LEIKNAR;
+  const r = table[slotTime];
+  if (!r) return 0;
+  const cpm = isWeekend ? r.H : r.V;
+  return cpm * RAS2_CPM_PRICE; // kr per second
+}
+
+// Helper: get rate for a date (returns null if slot not available that day)
+function getRate(station, slotTime, date, adtype) {
+  if (station === 'Ras2') {
+    return getRas2Rate(adtype || 'Leikid', slotTime, date);
+  }
+  const r = (RATES[station] || {})[slotTime];
+  if (!r) return 0;
+  const dow = date.getDay();
+  let base;
+  if (dow === 6) base = r.L;
+  else if (dow === 0) base = r.S;
+  else base = r.V;
+  if (!base) return null;
+  return base;
+}
+
+// Rate with premium applied
+function getRateWithPremium(station, slotTime, date, adtype) {
+  const base = getRate(station, slotTime, date, adtype);
+  if (!base) return base;
+  if (station === 'Ras2') return base; // no premium system for R2 yet
+  return base * getPremiumMultiplier(slotTime, date);
+}
+
+// Broadcast times per slot: SLOT_TIMES[slotRange][fjIndex] = 'HH:00'
+const SLOT_TIMES = {
+  '07:00-09:00': ['08:00','09:00'],
+  '09:15-11:15': ['10:00','11:00'],
+  '11:45-13:00': ['12:00','13:00'],
+  '13:15-15:45': ['14:00','15:00'],
+  '16:00-18:30': ['16:00','17:00'],
+  '19:00-00:00': ['19:00','20:00'],
+  '00:00-06:00': ['01:00','02:00'],
+  // Rás 2
+  '07:30-09:00': ['08:00','08:30'],
+  '09:10-11:50': ['09:30','10:30','11:00'],
+  '12:20-12:45': ['12:20','12:45'],
+  '13:10-15:30': ['13:30','14:30','15:00'],
+  '15:55-17:30': ['16:00','16:30','17:00'],
+  '17:00-18:00': ['17:00','18:00'],
+  '19:30-23:50': ['19:30','20:30'],
+};
+// Returns array of broadcast times for a slot given fj count — wraps if fj > available
+function slotBroadcastTimes(slotRange, fj) {
+  const times = SLOT_TIMES[slotRange] || [slotRange.split('-')[0]];
+  const result = [];
+  for (let i = 0; i < fj; i++) result.push(times[i % times.length]);
+  return result;
+}
+const AD_COLS  = ['var(--blue)','var(--green)','var(--amber)','var(--purple)','var(--red)'];
+const AD_PRINT = ['#1a4ab0','#1a7a40','#8a4800','#5020a0','#a01010'];
+
+function stationLabel(id) {
+  return id === 'Ras2' ? 'Rás 2' : id;
+}
+
+// ── State (never re-created during typing — fix for lag) ──────────
+let ADS = [
+  {name:'',sek:'',pct:'',from:'',to:''},
+  {name:'',sek:'',pct:'',from:'',to:''},
+];
+// days array index: 0=Sun,1=Man,2=Pri,3=Mid,4=Fim,5=Fos,6=Lau
+// For each slot, 'days' is an array of 7 booleans (Sun..Sat)
+// Default paid slots: Mon-Fri only (indices 1-5)
+// Default frii slots: Mon-Fri only
+function defaultDays(lau, sun) {
+  return [sun||false, true, true, true, true, true, lau||false];
+}
+let SLOTS = [
+  {time:'07:00-09:00', label:'Morgunn',      frii:false, fj:1, fjDays:defaultFjDays(), days:defaultDays()},
+  {time:'09:15-11:15', label:'Fyrir hadegi', frii:false, fj:1, fjDays:defaultFjDays(), days:defaultDays()},
+  {time:'11:45-13:00', label:'Hadegi',       frii:false, fj:1, fjDays:defaultFjDays(), days:defaultDays()},
+  {time:'13:15-15:45', label:'Eftir hadegi', frii:false, fj:1, fjDays:defaultFjDays(), days:defaultDays()},
+  {time:'16:00-18:30', label:'Siddegi',      frii:false, fj:1, fjDays:defaultFjDays(), days:defaultDays()},
+  {time:'19:00-00:00', label:'Kvold II',     frii:true,  fj:2, fjDays:[2,2,2,2,2,2,2], include:true, days:defaultDays()},
+];
+
+// ── Date helpers: dd/mm/yyyy ↔ yyyy-mm-dd ────────────────────────
+function dateTo_dmy(iso) {
+  // Convert yyyy-mm-dd → dd/mm/yyyy for display
+  if (!iso || iso.length < 10) return '';
+  const [y, m, d] = iso.split('-');
+  if (!y || !m || !d) return '';
+  return d + '/' + m + '/' + y;
+}
+function dateTo_iso(dmy) {
+  // Convert dd/mm/yyyy → yyyy-mm-dd for internal use
+  if (!dmy) return '';
+  const p = dmy.split('/');
+  if (p.length !== 3 || p[2].length !== 4) return '';
+  return p[2] + '-' + p[1].padStart(2,'0') + '-' + p[0].padStart(2,'0');
+}
+function dateTextInput(inp) {
+  // Auto-insert slashes while typing: 2 chars → add /, 5 chars → add /
+  let v = inp.value.replace(/[^0-9]/g,'');
+  if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
+  if (v.length > 5) v = v.slice(0,5) + '/' + v.slice(5);
+  inp.value = v.slice(0,10);
+  // Only refresh when complete date entered
+  if (inp.value.length === 10) refresh();
+}
+function dateAdInput(inp) {
+  let v = inp.value.replace(/[^0-9]/g,'');
+  if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
+  if (v.length > 5) v = v.slice(0,5) + '/' + v.slice(5);
+  inp.value = v.slice(0,10);
+  if (inp.value.length === 10) {
+    const i = +inp.dataset.i;
+    const field = inp.dataset.field;
+    if (ADS[i]) { ADS[i][field] = dateTo_iso(inp.value); refresh(false); }
+  }
+}
+
+
+const kr  = n => (n == null) ? '-' : new Intl.NumberFormat('is-IS').format(Math.round(n)) + ' kr';
+const krn = n => new Intl.NumberFormat('is-IS').format(Math.round(n));
+
+// Returns days in range that match the slot's days[] array (index 0=Sun..6=Sat)
+function slotDays(from, to, sl) {
+  const d = [], e = new Date(to), c = new Date(from);
+  const allowed = sl.days || [false,true,true,true,true,true,false];
+  while (c <= e) {
+    if (allowed[c.getDay()]) d.push(new Date(c));
+    c.setDate(c.getDate() + 1);
+  }
+  return d;
+}
+
+function workdays(from, to) {
+  const d = [], e = new Date(to), c = new Date(from);
+  while (c <= e) {
+    if (c.getDay() !== 0 && c.getDay() !== 6) d.push(new Date(c));
+    c.setDate(c.getDate() + 1);
+  }
+  return d;
+}
+
+function alldays(from, to) {
+  const d = [], e = new Date(to), c = new Date(from);
+  while (c <= e) { d.push(new Date(c)); c.setDate(c.getDate() + 1); }
+  return d;
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ── Update pct bar without re-rendering inputs ────────────────────
+function updatePctBar() {
+  const tot = ADS.reduce((s, a) => s + (+a.pct || 0), 0);
+  const fill = document.getElementById('pct-fill');
+  const lbl  = document.getElementById('pct-lbl');
+  if (!fill || !lbl) return;
+  fill.style.width      = Math.min(tot, 100) + '%';
+  fill.style.background = tot === 100 ? 'var(--green)' : tot > 100 ? 'var(--red)' : 'var(--amber)';
+  lbl.style.color       = tot === 100 ? 'var(--green)' : tot > 100 ? 'var(--red)' : 'var(--amber)';
+  lbl.textContent       = tot + ' / 100%';
+}
+
+// ── Render ads (full rebuild — only called on add/remove/init) ────
+function renderAds() {
+  const oldC = document.getElementById('ads-list');
+  const c = oldC.cloneNode(false);
+  oldC.parentNode.replaceChild(c, oldC);
+  ADS.forEach((ad, i) => {
+    const col = AD_COLS[i % AD_COLS.length];
+    const div = document.createElement('div');
+    div.className = 'adc';
+
+    // Slot filter chips — show all active paid slots as toggleable chips
+    const paidSlots = SLOTS.filter(s => !s.frii && s.label);
+    const allowedSlots = ad.slots || null; // null = all allowed
+    let slotChips = '';
+    if (paidSlots.length > 1) {
+      slotChips = '<div class="fld" style="margin-top:4px"><label>Leyfðir slottar</label>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:2px">';
+      paidSlots.forEach(sl => {
+        const active = !allowedSlots || allowedSlots.includes(sl.time);
+        slotChips += `<button onclick="toggleAdSlot(${i},'${sl.time}')"
+          style="background:${active?'rgba(78,143,255,.15)':'transparent'};border:1px solid ${active?'var(--blue)':'var(--b2)'};color:${active?'var(--blue)':'var(--t3)'};border-radius:4px;padding:2px 7px;font-size:9px;font-family:var(--mono);cursor:pointer">${escH(sl.label)}</button>`;
+      });
+      slotChips += '</div></div>';
+    }
+
+    div.innerHTML =
+      '<span class="abadge" style="background:' + col + '22;color:' + col + '">#' + (i+1) + '</span>' +
+      '<div class="fld" style="margin-bottom:6px"><label>Nafn auglysingar</label>' +
+        '<input data-field="name" data-i="' + i + '" value="' + escH(ad.name) + '" placeholder="t.d. Vpallar -1"></div>' +
+      '<div class="g3" style="margin-bottom:6px">' +
+        '<div class="fld"><label>Sek</label><input type="number" data-field="sek" data-i="' + i + '" value="' + (ad.sek||'') + '" placeholder="30"></div>' +
+        '<div class="fld"><label>Hlutfall %</label><input type="number" data-field="pct" data-i="' + i + '" value="' + (ad.pct||'') + '" placeholder="50" min="0" max="100"></div>' +
+        '<div class="fld"><label>&nbsp;</label>' +
+          (ADS.length > 1 ? '<button class="arm" onclick="rmAd(' + i + ')">x fjarlsegja</button>' : '<div></div>') +
+        '</div>' +
+      '</div>' +
+      '<div class="g2">' +
+        '<div class="fld"><label>Hefst (ef ser)</label><input placeholder="dd/mm/yyyy" maxlength="10" data-field="from" data-i="' + i + '" value="' + dateTo_dmy(ad.from||'') + '" oninput="dateAdInput(this)" onchange="ads_dateChange(this)"></div>' +
+        '<div class="fld"><label>Endar (ef ser)</label><input placeholder="dd/mm/yyyy" maxlength="10" data-field="to"   data-i="' + i + '" value="' + dateTo_dmy(ad.to||'')   + '" oninput="dateAdInput(this)" onchange="ads_dateChange(this)"></div>' +
+      '</div>' +
+      slotChips;
+    c.appendChild(div);
+  });
+  c.addEventListener('input', onAdInput);
+  updatePctBar();
+}
+
+function toggleAdSlot(ai, slotTime) {
+  const ad = ADS[ai];
+  const paidTimes = SLOTS.filter(s => !s.frii && s.time).map(s => s.time);
+  // If no filter set yet, start with all active
+  if (!ad.slots) ad.slots = [...paidTimes];
+  const idx = ad.slots.indexOf(slotTime);
+  if (idx >= 0) {
+    // Don't allow removing the last one
+    if (ad.slots.length <= 1) return;
+    ad.slots.splice(idx, 1);
+  } else {
+    ad.slots.push(slotTime);
+  }
+  // If all slots are selected, reset to null (= all)
+  if (ad.slots.length === paidTimes.length) ad.slots = null;
+  renderAds();
+  refresh(false);
+}
+
+function escH(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+function ads_dateChange(inp) {
+  const i = +inp.dataset.i;
+  const field = inp.dataset.field;
+  if (!ADS[i]) return;
+  ADS[i][field] = dateTo_iso(inp.value);
+  refresh(false);
+}
+
+// Delegated input handler — no re-render, just update state + preview
+function onAdInput(e) {
+  const inp = e.target;
+  const i   = +inp.dataset.i;
+  const field = inp.dataset.field;
+  if (i == null || !field || !ADS[i]) return;
+  const val = inp.value;
+  ADS[i][field] = (field === 'sek' || field === 'pct') ? +val : val;
+  if (field === 'pct') updatePctBar();
+  refresh(false); // only refresh preview, not the form
+}
+
+function addAd() {
+  if (ADS.length >= 5) return;
+  ADS.push({name:'', sek:'', pct:'', from:'', to:''});
+  renderAds(); refresh(false);
+}
+function rmAd(i) { ADS.splice(i, 1); renderAds(); refresh(false); }
+
+// ── Render slots ──────────────────────────────────────────────────
+const DAY_LABELS = ['Su','Má','Þr','Mi','Fi','Fö','La']; // Sun=0..Sat=6
+const DAY_COLS   = ['var(--purple)','var(--blue)','var(--blue)','var(--blue)','var(--blue)','var(--blue)','var(--amber)'];
+
+function defaultFjDays() { return [1,1,1,1,1,1,1]; }
+
+function renderSlots() {
+  const oldC = document.getElementById('slots-list');
+  const c = oldC.cloneNode(false);
+  oldC.parentNode.replaceChild(c, oldC);
+  SLOTS.forEach((sl, i) => {
+    const days = sl.days || defaultDays();
+    const fj   = sl.fj || 1;
+    const div  = document.createElement('div');
+    div.className = 'srow';
+    div.style.flexDirection = 'column';
+    div.style.alignItems = 'stretch';
+    div.style.gap = '5px';
+    if (sl.frii) div.style.borderColor = 'rgba(63,214,138,.35)';
+
+    const hasRate = d => Object.values(RATES).some(r => r[sl.time] && r[sl.time][d===6?'L':d===0?'S':'V'] != null);
+
+    // Row 1: time | label | include checkbox | ×
+    const includeChk = sl.frii
+      ? '<input type="checkbox" style="accent-color:var(--green);width:12px;height:12px;cursor:pointer;flex-shrink:0" data-si="'+i+'" data-sf="include" '+(sl.include!==false?'checked':'')+' title="Taka med">'
+      : '';
+
+    const row1 =
+      '<div style="display:flex;align-items:center;gap:6px">' +
+        '<input class="si"  data-si="'+i+'" data-sf="time"  value="'+escH(sl.time)+'"  placeholder="00:00-00:00">' +
+        '<input class="sl2" data-si="'+i+'" data-sf="label" value="'+escH(sl.label)+'" placeholder="Nafn" style="flex:1">' +
+        includeChk +
+        (SLOTS.length > 1 ? '<button class="srm" onclick="rmSlot('+i+')">×</button>' : '') +
+      '</div>';
+
+    // Row 2: 7 day buttons, each active day gets its own − N + below
+    const fjDays = sl.fjDays || defaultFjDays();
+    let dbtns = '';
+    for (let di = 0; di < 7; di++) {
+      const on     = !!days[di];
+      const noRate = (di===6&&!hasRate(6))||(di===0&&!hasRate(0));
+      const col    = on ? DAY_COLS[di] : 'var(--t3)';
+      const bg     = on ? (di===0||di===6 ? 'rgba(167,139,250,.15)' : 'rgba(78,143,255,.12)') : 'transparent';
+      const fjd    = fjDays[di] || 1;
+      const fjCol  = sl.frii ? 'var(--green)' : col;
+      dbtns +=
+        '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">' +
+          '<button onclick="toggleDay('+i+','+di+')" '+(noRate?'disabled ':'')+
+            'style="background:'+bg+';border:1px solid '+(on?col:'var(--b2)')+';color:'+col+
+            ';border-radius:4px;padding:1px 5px;font-size:9px;font-family:var(--mono);cursor:'+(noRate?'default':'pointer')+
+            ';opacity:'+(noRate?'.25':'1')+'">'+DAY_LABELS[di]+'</button>' +
+          (on && !noRate
+            ? '<div style="display:flex;align-items:center;gap:1px">' +
+                '<button onclick="stepFjDay('+i+','+di+',-1)" style="background:var(--s3);border:1px solid var(--b2);color:var(--t3);border-radius:2px;width:14px;height:13px;cursor:pointer;font-size:11px;line-height:1;padding:0">−</button>' +
+                '<span style="width:14px;text-align:center;font-family:var(--mono);font-size:10px;color:'+fjCol+'">'+fjd+'</span>' +
+                '<button onclick="stepFjDay('+i+','+di+',1)"  style="background:var(--s3);border:1px solid var(--b2);color:var(--t3);border-radius:2px;width:14px;height:13px;cursor:pointer;font-size:11px;line-height:1;padding:0">+</button>' +
+              '</div>'
+            : '<div style="height:13px"></div>') +
+        '</div>';
+    }
+
+    const row2 = '<div style="display:flex;align-items:flex-start;gap:4px">' + dbtns + '</div>';
+
+    div.innerHTML = row1 + row2;
+    c.appendChild(div);
+  });
+  c.addEventListener('input', onSlotInput);
+  c.addEventListener('change', onSlotInput);
+}
+
+function fmtBudget(inp) {
+  const pos = inp.selectionStart;
+  const raw = inp.value.replace(/\./g, '').replace(/\D/g, '');
+  const fmt = raw.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const diff = fmt.length - inp.value.length;
+  inp.value = fmt;
+  inp.setSelectionRange(pos + diff, pos + diff);
+}
+
+function toggleMobForm() {
+  const fp = document.querySelector('.formpanel');
+  const btn = document.getElementById('mob-toggle');
+  fp.classList.toggle('open');
+  btn.textContent = fp.classList.contains('open') ? '✕' : '☰';
+}
+
+function initMobile() {
+  if (window.innerWidth <= 768) {
+    document.getElementById('mob-actions').style.display = 'flex';
+  }
+}
+
+const SEND_TO = 'birtingar@bestun.is';
+
+async function approveAndSend() {
+  const plans = compute();
+  if (!plans) { toast('Fylltu inn kampáníuupplýsingar fyrst'); return; }
+
+  const client = plans[0].client || 'Kampáníuáætlun';
+  const gFrom  = plans[0].gFrom;
+  const gTo    = plans[0].gTo;
+
+  // Confirm modal
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+  modal.innerHTML = `
+    <div style="background:var(--s1);border:1px solid var(--b2);border-radius:14px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 24px 80px rgba(0,0,0,.5)">
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px">✓ Samþykkja og senda?</div>
+      <div style="font-size:12px;color:var(--t2);margin-bottom:16px;line-height:1.7">
+        <b style="color:var(--t1)">${escH(client)}</b> &middot; ${gFrom} – ${gTo}<br>
+        ${plans.map(p=>`<span style="color:var(--t3)">${p.station}:</span> <b>${p.grandCost.toLocaleString('is-IS')} kr</b>`).join('&nbsp;&nbsp;&nbsp;')}
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:11px;color:var(--t2);line-height:1.7">
+        📥 Tvær Excel-skrár verða sóttar á tölvuna þína:<br>
+        <span style="color:var(--t1);font-family:var(--mono);font-size:10px">• Pöntunarskjal (Bylgjan + FMX)<br>• Airdate (Bylgjan + FMX)</span><br><br>
+        📧 Tölvupóstur opnar til: <span style="color:var(--blue)">${SEND_TO}</span><br>
+        <span style="color:var(--t3);font-size:10px">Hengdu skrárnar við og sendu</span>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="this.closest('[data-modal]').remove()" style="background:transparent;border:1px solid var(--b2);color:var(--t2);border-radius:7px;padding:7px 16px;cursor:pointer;font-family:var(--sans);font-size:12px">Hætta við</button>
+        <button id="confirm-send-btn" style="background:var(--green);color:#000;border:none;border-radius:7px;padding:7px 20px;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:600">Sækja &amp; opna tölvupóst</button>
+      </div>
+    </div>`;
+  modal.setAttribute('data-modal','1');
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+
+  document.getElementById('confirm-send-btn').onclick = async () => {
+    modal.remove();
+    await doSendFiles(plans, client, gFrom, gTo);
+  };
+}
+
+async function doSendFiles(plans, client, gFrom, gTo) {
+  toast('Bý til skrár...');
+  const sorted  = [...plans].sort((a,b) => a.station==='Bylgjan'?-1:b.station==='Bylgjan'?1:0);
+  const safeName = client.replace(/[^a-zA-Z0-9_-]/g,'_');
+
+  // Pöntunarskjal
+  const wbPon  = new ExcelJS.Workbook();
+  for (const plan of sorted) await genPontunarTab(wbPon, plan);
+  const ponBuf  = await wbPon.xlsx.writeBuffer();
+  const ponName = safeName + '_Pontunarskjal_' + gFrom + '.xlsx';
+
+  // Airdate
+  const wbAir  = XLSX.utils.book_new();
+  sorted.forEach(plan => genAirdateTab(wbAir, plan));
+  const airBuf  = XLSX.write(wbAir, {bookType:'xlsx', type:'array'});
+  const airName = safeName + '_Airdate_' + gFrom + '.xlsx';
+
+  // Download both
+  [[new Blob([ponBuf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), ponName],
+   [new Blob([airBuf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), airName]
+  ].forEach(([blob, name]) => {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  // Build email body
+  let summary = 'Góðan dag,\n\nÁætlun samþykkt. Vinsamlegast sjáið viðhengi.\n\n';
+  summary += 'Viðskiptavinur: ' + client + '\nTímabil: ' + gFrom + ' → ' + gTo + '\n\n';
+  sorted.forEach(p => {
+    const spots = p.lines.filter(l=>!l.frii).reduce((s,l)=>s+l.spots,0);
+    summary += p.station + ':\n';
+    summary += '  Fjárhagsáætlun:  ' + p.budget.toLocaleString('is-IS') + ' kr\n';
+    summary += '  Heildarkostnaður: ' + p.grandCost.toLocaleString('is-IS') + ' kr\n';
+    summary += '  Afsláttur:        ' + Math.round(p.disc) + '%\n';
+    summary += '  Greiddir spots:   ' + spots + '\n\n';
+  });
+  summary += 'Viðhengi:\n• ' + ponName + '\n• ' + airName + '\n\nKv.';
+
+  const subject = encodeURIComponent('Áætlun samþykkt: ' + client + ' · ' + gFrom + ' – ' + gTo);
+  setTimeout(() => {
+    window.location.href = 'mailto:' + SEND_TO + '?subject=' + subject + '&body=' + encodeURIComponent(summary);
+    toast('📎 Skrárnar sóttar — hengdu þær við og sendu!');
+  }, 800);
+}
+
+function goHome() {
+  const hp  = document.getElementById('homepage');
+  const app = document.getElementById('topbar');
+  app.style.display = 'none';
+  hp.style.display  = 'flex';
+  hp.style.opacity  = '0';
+  hp.classList.remove('hide');
+  requestAnimationFrame(() => { hp.style.transition='opacity .3s'; hp.style.opacity='1'; });
+}
+
+function enterApp() {
+  const hp = document.getElementById('homepage');
+  const app = document.getElementById('topbar');
+  hp.classList.add('hide');
+  setTimeout(() => { hp.style.display = 'none'; app.style.display = 'flex'; }, 350);
+}
+
+function syncTabName() {
+  const val = document.getElementById('f-client').value.trim();
+  if (!val) return;
+  TABS[ACTIVE_TAB].name = val;
+  renderTabs();
+  updateMasterBar();
+}
+
+function updateMasterBar() {
+  // Collect budget from all tabs (save current first)
+  saveCurrentTab();
+  const tabBudgets = TABS.map(t => {
+    const raw = (t.state.budget || '0').toString().replace(/\./g, '');
+    return { name: t.name, budget: +raw || 0, station: t.state.station || '' };
+  });
+  const total = tabBudgets.reduce((s, t) => s + t.budget, 0);
+  const bar   = document.getElementById('master-bar');
+  const totalEl = document.getElementById('master-total');
+  const summEl  = document.getElementById('master-tabs-summary');
+  if (!bar) return;
+
+  // Only show if more than one tab has a budget set
+  const withBudget = tabBudgets.filter(t => t.budget > 0);
+  if (withBudget.length < 2) { bar.style.display = 'none'; return; }
+
+  bar.style.display = 'flex';
+  totalEl.textContent = total.toLocaleString('is-IS') + ' kr';
+
+  const COLS = ['var(--blue)','var(--amber)','var(--green)','var(--purple)','var(--red)'];
+  summEl.innerHTML = withBudget.map((t, i) => {
+    const pct = total > 0 ? Math.round(t.budget / total * 100) : 0;
+    const col = COLS[i % COLS.length];
+    return `<span style="background:${col}18;border:1px solid ${col}44;border-radius:4px;padding:1px 8px;color:${col};font-family:var(--mono);font-size:10px">
+      ${escH(t.name||('Tab '+(i+1)))} · ${t.station} · ${t.budget.toLocaleString('is-IS')} kr <span style="opacity:.6">(${pct}%)</span>
+    </span>`;
+  }).join('');
+}
+
+function stepFj(si, delta) {
+  SLOTS[si].fj = Math.max(1, (SLOTS[si].fj || 1) + delta);
+  renderSlots();
+  refresh(false);
+}
+
+function stepFjDay(si, di, delta) {
+  if (!SLOTS[si].fjDays) SLOTS[si].fjDays = defaultFjDays();
+  SLOTS[si].fjDays[di] = Math.max(1, (SLOTS[si].fjDays[di] || 1) + delta);
+  SLOTS[si].fj = SLOTS[si].fjDays[1]; // keep fj in sync
+  renderSlots();
+  refresh(false);
+}
+
+function toggleDay(si, di) {
+  if (!SLOTS[si].days) SLOTS[si].days = defaultDays();
+  SLOTS[si].days[di] = !SLOTS[si].days[di];
+  renderSlots();
+  refresh(false);
+}
+
+function onSlotInput(e) {
+  const inp = e.target;
+  const i   = +inp.dataset.si;
+  const field = inp.dataset.sf;
+  if (i == null || !field || !SLOTS[i]) return;
+  const bools = ['include','frii'];
+  const nums  = ['fj'];
+  SLOTS[i][field] = bools.includes(field) ? inp.checked : nums.includes(field) ? Math.max(1, +inp.value||1) : inp.value;
+  if (bools.includes(field)) renderSlots();
+  refresh(false);
+}
+
+function addSlot() { SLOTS.push({time:'', label:'', frii:false, fj:1, include:true, days:defaultDays()}); renderSlots(); refresh(false); }
+function rmSlot(i) { SLOTS.splice(i, 1); renderSlots(); refresh(false); }
+
+// ── Premiums ─────────────────────────────────────────────────────
+// type: 'period' (date range) or 'slot' (slot time match)
+// ── Álag (structured checkboxes) ─────────────────────────────────
+// News slot premiums: applies when broadcast time falls near the news hour
+const ALAG_FRETTIR_DEF = [
+  { id:'f8',  label:'Fréttir kl. 8',  hour:8  },
+  { id:'f12', label:'Fréttir kl. 12', hour:12 },
+  { id:'f17', label:'Fréttir kl. 17', hour:17 },
+];
+// Season premiums: applies when date falls in month range
+const ALAG_ARSTID_DEF = [
+  { id:'s_vor',    label:'Vor (mars–maí)',        months:[3,4,5]   },
+  { id:'s_sumar',  label:'Sumar (jún–ágú)',       months:[6,7,8]   },
+  { id:'s_haust',  label:'Haust (sep–nóv)',        months:[9,10,11] },
+  { id:'s_vetur',  label:'Vetur (des–feb)',        months:[12,1,2]  },
+];
+
+// State: { id -> { on: bool, pct: number } }
+let ALAG = {};
+
+// ── Stations (multi-station) ──────────────────────────────────────
+let STATIONS = [
+  { id: 'Bylgjan', name: 'Bylgjan', budget: 0, disc: 40 },
+  { id: 'FMX',     name: 'FMX',     budget: 0, disc: 40 },
+];
+
+function renderStations() {
+  const c = document.getElementById('stations-list');
+  if (!c) return;
+  const totalBudget  = +(document.getElementById('f-budget')?.value||'0').replace(/\./g,'') || 0;
+  const allocatedSum = STATIONS.reduce((s, st) => s + (+st.budget||0), 0);
+  const remaining    = totalBudget - allocatedSum;
+  const balanced     = Math.abs(remaining) < 1;
+
+  c.innerHTML = STATIONS.map((st, i) => {
+    const col    = ['var(--blue)','var(--amber)','var(--green)','var(--purple)'][i%4];
+    const pct    = totalBudget > 0 ? Math.round((+st.budget||0) / totalBudget * 100) : 0;
+    const budFmt = (+st.budget||0).toLocaleString('is-IS');
+    return `<div style="background:var(--s2);border:1px solid ${col}44;border-radius:7px;padding:8px 10px;margin-bottom:5px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <div style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></div>
+        <select onchange="onStationField(${i},'id',this.value)" style="background:var(--s3);border:1px solid var(--b2);border-radius:4px;color:var(--t1);font-family:var(--mono);font-size:11px;padding:2px 6px;flex:1">
+          <option value="Bylgjan" ${st.id==='Bylgjan'?'selected':''}>Bylgjan</option>
+          <option value="FMX"     ${st.id==='FMX'    ?'selected':''}>FMX</option>
+          <option value="Ras2"    ${st.id==='Ras2'   ?'selected':''}>Rás 2 (RÚV)</option>
+        </select>
+        <span id="st-pct-${i}" style="font-size:10px;color:${col};font-family:var(--mono);flex-shrink:0">${pct}%</span>
+        ${STATIONS.length > 1 ? `<button onclick="rmStation(${i})" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:15px;line-height:1;padding:0 2px" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--t3)'">×</button>` : ''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div>
+          <div style="font-size:9px;color:var(--t3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.4px">Fjárhagsáætlun (kr)</div>
+          <input id="st-budget-${i}" type="text" value="${budFmt}" oninput="fmtStationBudget(this,${i})"
+            style="background:var(--s3);border:1px solid ${balanced?'var(--b2)':'var(--amber)'};border-radius:4px;color:${col};font-family:var(--mono);font-size:12px;padding:3px 6px;width:100%;text-align:right">
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--t3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.4px">${st.id==='Ras2' ? 'Styrking %' : 'Afsláttur %'}</div>
+          <input type="number" value="${st.disc||0}" min="0" max="100" onchange="onStationField(${i},'disc',+this.value)"
+            style="background:var(--s3);border:1px solid var(--b2);border-radius:4px;color:var(--t1);font-family:var(--mono);font-size:12px;padding:3px 6px;width:100%;text-align:center">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Show remaining/over budget indicator
+  const existingWarn = document.getElementById('stations-balance');
+  if (existingWarn) existingWarn.remove();
+  if (totalBudget > 0 && STATIONS.length > 1) {
+    const warn = document.createElement('div');
+    warn.id = 'stations-balance';
+    const over = remaining < 0;
+    warn.style.cssText = `font-size:10px;font-family:var(--mono);text-align:right;padding:2px 4px;color:${balanced?'var(--green)':over?'var(--red)':'var(--amber)'}`;
+    warn.textContent = balanced
+      ? '✓ Jafnað ' + totalBudget.toLocaleString('is-IS') + ' kr'
+      : (over ? '▲ Yfir um ' : '▼ Eftir ') + Math.abs(remaining).toLocaleString('is-IS') + ' kr';
+    c.appendChild(warn);
+  }
+}
+
+function fmtStationBudget(inp, i) {
+  const raw = inp.value.replace(/\./g,'').replace(/\D/g,'');
+  const fmt = raw.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  const pos = inp.selectionStart, diff = fmt.length - inp.value.length;
+  inp.value = fmt;
+  try { inp.setSelectionRange(pos+diff, pos+diff); } catch(e) {}
+  STATIONS[i].budget = +raw || 0;
+  // Update only the pct label and balance indicator without full re-render
+  updateStationPct(i);
+  refresh(false);
+}
+
+function updateStationPct(changedIdx) {
+  const totalBudget  = +(document.getElementById('f-budget')?.value||'0').replace(/\./g,'') || 0;
+  const allocatedSum = STATIONS.reduce((s, st) => s + (+st.budget||0), 0);
+  const remaining    = totalBudget - allocatedSum;
+  const balanced     = Math.abs(remaining) < 1;
+
+  // Update each station's % label
+  STATIONS.forEach((st, i) => {
+    const pct = totalBudget > 0 ? Math.round((+st.budget||0) / totalBudget * 100) : 0;
+    const pctEl = document.getElementById('st-pct-'+i);
+    if (pctEl) pctEl.textContent = pct + '%';
+    const inp = document.getElementById('st-budget-'+i);
+    if (inp) inp.style.borderColor = balanced ? 'var(--b2)' : 'var(--amber)';
+  });
+
+  // Update balance label
+  const balEl = document.getElementById('stations-balance');
+  if (balEl && totalBudget > 0 && STATIONS.length > 1) {
+    const over = remaining < 0;
+    balEl.style.color = balanced ? 'var(--green)' : over ? 'var(--red)' : 'var(--amber)';
+    balEl.textContent = balanced
+      ? '✓ Jafnað ' + totalBudget.toLocaleString('is-IS') + ' kr'
+      : (over ? '▲ Yfir um ' : '▼ Eftir ') + Math.abs(remaining).toLocaleString('is-IS') + ' kr';
+  }
+}
+
+function onStationField(i, field, val) {
+  STATIONS[i][field] = val;
+  // When switching to Rás 2, default styrking to 10%
+  if (field === 'id' && val === 'Ras2' && !STATIONS[i].disc) {
+    STATIONS[i].disc = 10;
+  }
+  if (field === 'id' && val === 'Ras2' && STATIONS[i].disc === 40) {
+    STATIONS[i].disc = 10;
+  }
+  renderStations();
+  refresh(false);
+}
+function addStation() {
+  if (STATIONS.length >= 4) return;
+  const options = ['FMX','Bylgjan'];
+  const used = STATIONS.map(s => s.id);
+  const next = options.find(o => !used.includes(o)) || 'FMX';
+  STATIONS.push({ id: next, name: next, budget: 0, disc: 40 });
+  renderStations();
+  refresh(false);
+}
+function rmStation(i) {
+  if (STATIONS.length <= 1) return;
+  STATIONS.splice(i, 1);
+  renderStations();
+  refresh(false);
+}
+
+function alagPctSelect(id) {
+  const cur = (ALAG[id]||{}).pct || 10;
+  return [5,10,15,20].map(v =>
+    `<option value="${v}" ${cur===v?'selected':''}>${v}%</option>`
+  ).join('');
+}
+
+function renderAlag() {
+  const fEl = document.getElementById('alag-frettir');
+  const sEl = document.getElementById('alag-arstid');
+  if (!fEl || !sEl) return;
+
+  function renderRow(def) {
+    const state = ALAG[def.id] || {on:false, pct:10};
+    const on = !!state.on;
+    return `<div style="display:flex;align-items:center;gap:7px;background:var(--s2);border:1px solid ${on?'rgba(255,82,82,.35)':'var(--b1)'};border-radius:6px;padding:5px 9px;transition:border .15s">
+      <input type="checkbox" id="alag-chk-${def.id}" ${on?'checked':''} onchange="toggleAlag('${def.id}',this.checked)"
+        style="accent-color:var(--red);width:13px;height:13px;cursor:pointer;flex-shrink:0">
+      <label for="alag-chk-${def.id}" style="font-size:11px;color:${on?'var(--t1)':'var(--t2)'};cursor:pointer;flex:1">${def.label}</label>
+      <select onchange="setAlagPct('${def.id}',+this.value)" ${on?'':'disabled'}
+        style="background:var(--s3);border:1px solid ${on?'rgba(255,82,82,.4)':'var(--b2)'};border-radius:4px;color:${on?'var(--red)':'var(--t3)'};font-family:var(--mono);font-size:10px;padding:2px 5px;width:52px;cursor:pointer">
+        ${alagPctSelect(def.id)}
+      </select>
+    </div>`;
+  }
+
+  fEl.innerHTML = ALAG_FRETTIR_DEF.map(renderRow).join('');
+  sEl.innerHTML = ALAG_ARSTID_DEF.map(renderRow).join('');
+}
+
+function toggleAlag(id, on) {
+  if (!ALAG[id]) ALAG[id] = {on:false, pct:10};
+  ALAG[id].on = on;
+  renderAlag();
+  refresh(false);
+}
+
+function setAlagPct(id, pct) {
+  if (!ALAG[id]) ALAG[id] = {on:true, pct};
+  ALAG[id].pct = pct;
+  refresh(false);
+}
+
+// Returns premium multiplier for a given slot and date
+function getPremiumMultiplier(slotTime, date) {
+  let mult = 1;
+
+  // News slot: check if any broadcast time for this slot is within 1hr before a news hour
+  ALAG_FRETTIR_DEF.forEach(def => {
+    const state = ALAG[def.id];
+    if (!state || !state.on) return;
+    // Get broadcast times for this slot
+    const btimes = SLOT_TIMES[slotTime] || [];
+    const near = btimes.some(kt => {
+      const h = parseInt(kt.split(':')[0], 10);
+      return h === def.hour || h === def.hour - 1;
+    });
+    if (near) mult *= (1 + (state.pct||10)/100);
+  });
+
+  // Season: check month
+  const month = date.getMonth() + 1; // 1-12
+  ALAG_ARSTID_DEF.forEach(def => {
+    const state = ALAG[def.id];
+    if (!state || !state.on) return;
+    if (def.months.includes(month)) mult *= (1 + (state.pct||10)/100);
+  });
+
+  return mult;
+}
+
+// ── Compute plan ──────────────────────────────────────────────────
+function computeForStation(stationId, discPct, budget) {
+  const station  = stationId;
+  const disc     = discPct / 100;
+  const adtype   = document.getElementById('f-type').value || 'Leikid';
+  const gFrom = dateTo_iso(document.getElementById('f-start').value);
+  const gTo   = dateTo_iso(document.getElementById('f-end').value);
+  if (!gFrom || !gTo || !budget) return null;
+
+  const validAds  = ADS.filter(a => a.name && +a.sek > 0 && +a.pct > 0);
+  if (!validAds.length) return null;
+
+  // For Rás 2 — use fixed RAS2_SLOTS, budget stretches 10% (styrking)
+  const effectiveBudget = station === 'Ras2' ? budget * 1.10 : budget;
+  const effectiveSlots  = station === 'Ras2'
+    ? RAS2_SLOTS.map(s => ({
+        ...s,
+        fj: 1,
+        fjDays: defaultFjDays(),
+        days: defaultDays(),
+        include: true,
+      }))
+    : [...SLOTS];
+
+  const paidSlots = effectiveSlots.filter(s => !s.frii && s.time);
+  const freeSlots = station === 'Ras2' ? [] : effectiveSlots.filter(s => s.frii && s.time && s.include !== false);
+  const lines = [];
+  let grandCost = 0;
+
+  // Total pct share for budget splitting
+  const totalPct = validAds.reduce((s, a) => s + (+a.pct), 0) || 100;
+
+  validAds.forEach((ad, ai) => {
+    const af = ad.from || gFrom;
+    const at = ad.to   || gTo;
+    const adBudget = effectiveBudget * ((+ad.pct) / totalPct) * 1.02; // 2% buffer
+    const adShare  = (+ad.pct) / totalPct;
+
+    // Only use slots this ad is allowed in (null = all)
+    const adPaidSlots = ad.slots
+      ? paidSlots.filter(sl => ad.slots.includes(sl.time))
+      : paidSlots;
+
+    adPaidSlots.forEach(sl => {
+      const days   = slotDays(af, at, sl);
+      const fjDays = sl.fjDays || defaultFjDays();
+      if (!days.length) return;
+
+      // Cost and spots vary per day based on fjDays[dow]
+      let slotCost = 0;
+      let totalSpots = 0;
+      const dayEntries = days.map(d => {
+        const dow = d.getDay();
+        const fj  = Math.max(1, fjDays[dow] || 1);
+        const r   = getRateWithPremium(station, sl.time, d, adtype);
+        // Rás 2: cost = CPM × sek (no discount — styrking is extra spots, not price reduction)
+        // FMX/Bylgjan: cost = rate × (1-disc) × sek
+        const cpp = station === 'Ras2'
+          ? (r || 0) * (+ad.sek)
+          : (r || 0) * (1 - disc) * (+ad.sek);
+        const dayCost = cpp * fj * adShare;
+        slotCost  += dayCost;
+        totalSpots += fj * adShare;
+        return { d, r: r || 0, cpp, fj };
+      });
+      grandCost += slotCost;
+
+      // Representative fj for display (most common value across active days)
+      const fjCounts = {};
+      days.forEach(d => { const v = fjDays[d.getDay()]||1; fjCounts[v] = (fjCounts[v]||0)+1; });
+      const repFj = +Object.entries(fjCounts).sort((a,b)=>b[1]-a[1])[0][0];
+
+      const avgCostPerSpot = totalSpots > 0 ? slotCost / totalSpots : 0;
+
+      lines.push({
+        ad: ad.name, ai, sek: +ad.sek, pct: +ad.pct,
+        slot: sl.label, time: sl.time, kl: sl.time.split('-')[0],
+        from: af, to: at, wd: days, dayEntries,
+        fj: repFj, fjDays,
+        spots: Math.round(totalSpots),
+        rate: Math.round(avgCostPerSpot) || 0,
+        cpp: avgCostPerSpot,
+        lc: slotCost, frii: false,
+        days: sl.days
+      });
+    });
+
+    freeSlots.forEach(sl => {
+      // frí slots only run on days where this ad has ≥1 paid spot
+      // Collect all days this ad has any paid slot
+      const paidDaySet = {};
+      lines.filter(l => l.ai === ai && !l.frii).forEach(l => l.wd.forEach(d => { paidDaySet[d.toDateString()] = d; }));
+      const paidDays = Object.values(paidDaySet).sort((a,b) => a-b);
+      // Intersect with slot's own day filter
+      const slDays = slotDays(af, at, sl);
+      const slDaySet = new Set(slDays.map(d => d.toDateString()));
+      const friDays = paidDays.filter(d => slDaySet.has(d.toDateString()));
+
+      const slotFj = Math.max(1, sl.fj || 2); // use slot's fj (default 2)
+      lines.push({
+        ad: ad.name, ai, sek: +ad.sek, pct: +ad.pct,
+        slot: sl.label, time: sl.time, kl: sl.time.split('-')[0],
+        from: af, to: at, wd: friDays, dayEntries: friDays.map(d => ({d, r:0, cpp:0})),
+        fj: slotFj, spots: slotFj * friDays.length, rate: 0, cpp: 0, lc: 0, frii: true,
+        days: sl.days
+      });
+    });
+  });
+
+  return {
+    station, budget, disc: disc * 100, gFrom, gTo,
+    client: document.getElementById('f-client').value || '-',
+    adtype: document.getElementById('f-type').value,
+    validAds, lines, grandCost
+  };
+}
+
+// Wrapper: compute for all active stations
+function compute() {
+  const totalBudget = +(document.getElementById('f-budget').value.replace(/\./g,'')) || 0;
+  if (!totalBudget) return null;
+  const results = [];
+  STATIONS.forEach(st => {
+    const stBudget = +st.budget || 0;
+    if (!stBudget) return;
+    const plan = computeForStation(st.id, +st.disc||0, stBudget);
+    if (plan) results.push(plan);
+  });
+  return results.length ? results : null;
+}
+
+// ── Weighted rotation: which ad airs each slot-day combination ────
+// Key: date+slotTime → adIndex
+// This makes ads alternate within the same day across different slots
+function buildRotation(validAds, lines) {
+  // Collect all unique (date, slotTime) pairs, sorted by date then time
+  const pairSet = {};
+  lines.filter(l => !l.frii).forEach(l => {
+    l.wd.forEach(d => {
+      const key = d.toDateString() + '|' + l.time;
+      pairSet[key] = { d, time: l.time };
+    });
+  });
+  const allPairs = Object.values(pairSet).sort((a, b) => {
+    const dd = a.d - b.d;
+    return dd !== 0 ? dd : a.time.localeCompare(b.time);
+  });
+
+  const targets = validAds.map(a => a.pct / 100);
+  const counts  = validAds.map(() => 0);
+  const map     = {};
+  allPairs.forEach(({ d, time }) => {
+    const tot    = counts.reduce((s, c) => s + c, 0) + 1;
+    const ratios = counts.map((c, ii) => (c / tot) - targets[ii]);
+    const pick   = ratios.indexOf(Math.min(...ratios));
+    counts[pick]++;
+    map[d.toDateString() + '|' + time] = pick;
+  });
+  return map;
+}
+
+// ── Airdate data ──────────────────────────────────────────────────
+// allwd = ALL calendar days (incl weekends) for column headers
+// but only workdays get 1s
+function buildAirdata(plan) {
+  const { station, validAds, lines, gFrom, gTo } = plan;
+  const rot   = buildRotation(validAds, lines);
+  const allwd = alldays(gFrom, gTo);
+
+  const blocks = validAds.map((ad, ai) => {
+    const adLines = lines.filter(l => l.ai === ai);
+    const rows = adLines.map(line => {
+      const dm = {};
+      line.wd.forEach(d => {
+        const key = d.toDateString();
+        // Free slots: air every workday
+        // Paid slots: air on this ad's rotation day (or every day if fj >= 2)
+        if (line.frii) {
+          dm[key] = 1;
+        } else {
+          const rotKey = key + '|' + line.time;
+          if (line.fj >= 2 || rot[rotKey] === ai) dm[key] = 1;
+        }
+      });
+      return { label: line.slot + ' ' + line.time, frii: line.frii, dm };
+    });
+    return { name: ad.name, num: ai + 1, rows };
+  });
+
+  return { blocks, allwd, station };
+}
+
+// ── Airdate HTML preview ──────────────────────────────────────────
+function airHTML(airdata) {
+  const { blocks, allwd, station } = airdata;
+  let t = '<table><tr><th class="lbl">' + station + '</th>';
+  allwd.forEach(d => {
+    const wknd = d.getDay() === 0 || d.getDay() === 6;
+    const mon  = d.getDay() === 1;
+    t += '<th class="' + (wknd ? 'wknd' : '') + '" style="' + (mon ? 'border-left:2px solid var(--b2)' : '') + '">' +
+      d.getDate() + '<br><span style="font-size:8px;color:var(--t3)">' + DAYS_IS[d.getDay()] + '</span></th>';
+  });
+  t += '</tr>';
+
+  blocks.forEach(block => {
+    t += '<tr><td class="lbl adhdr" colspan="' + (allwd.length + 1) + '">#' + block.num + ' - ' + escH(block.name) + '</td></tr>';
+    block.rows.forEach(row => {
+      t += '<tr><td class="lbl">' + escH(row.label) + '</td>';
+      allwd.forEach(d => {
+        const wknd = d.getDay() === 0 || d.getDay() === 6;
+        const mon  = d.getDay() === 1;
+        const val  = row.dm[d.toDateString()];
+        const cls  = wknd ? 'wknd' : val ? (row.frii ? 'free' : 'spot') : '';
+        t += '<td class="' + cls + '" style="' + (mon ? 'border-left:2px solid var(--b2)' : '') + '">' + (val || '') + '</td>';
+      });
+      t += '</tr>';
+    });
+  });
+  return t + '</table>';
+}
+
+// ── Email text ────────────────────────────────────────────────────
+function buildEmail(plan) {
+  const { station, budget, disc, gFrom, gTo, client, validAds, lines, grandCost } = plan;
+  const over = grandCost - budget;
+  const al = validAds.map(a =>
+    '  - ' + a.name + ' (' + a.sek + ' sek) - ' + a.pct + '%  ' + kr(budget * (a.pct / 100))
+  ).join('\n');
+  const pl = [...new Set(lines.filter(l => !l.frii).map(l => '  - ' + l.slot + '  ' + l.time))].join('\n');
+  const fl = [...new Set(lines.filter(l =>  l.frii).map(l => '  - ' + l.slot + '  ' + l.time + '  [fri]'))].join('\n');
+  return (
+    'Kampaniuaetlun - ' + client + '\n' +
+    '-'.repeat(48) + '\n\n' +
+    'Stod:              ' + station + '\n' +
+    'Timabil:           ' + gFrom + '  ->  ' + gTo + '\n' +
+    'Afslattr:          ' + disc + '%\n\n' +
+    'AUGLYSINGAR:\n' + al + '\n\n' +
+    'SLOTTAR:\n' + pl + (fl ? '\n' + fl : '') + '\n\n' +
+    'KOSTNADUR:\n' +
+    '  Fjarhagsaetlun:      ' + kr(budget) + '\n' +
+    '  Aetladur kostnadur:  ' + kr(grandCost) +
+    (over > 0 ? '   (+' + Math.round(over / budget * 100) + '% yfir)' : '') + '\n\n' +
+    'Vinsamlegast hafid samband ef breytingar eru nauðsynlegar.\n\nKaer kvedja'
+  );
+}
+
+// ── Refresh preview (never touches form inputs) ───────────────────
+function refresh(rerenderForm) {
+  saveCurrentTab();
+  updateMasterBar();
+  if (rerenderForm) { renderAds(); renderSlots(); renderStations(); }
+
+  const plans = compute();
+  const pv    = document.getElementById('preview');
+
+  if (!plans) {
+    pv.innerHTML = '<div class="empty"><div class="ico">&#x1F4CB;</div><p>Fylltu inn kampaniuupplysingar til ad sja aetlun</p></div>';
+    return;
+  }
+
+  const totalBudget   = plans.reduce((s, p) => s + p.budget, 0);
+  const totalCost     = plans.reduce((s, p) => s + p.grandCost, 0);
+  const totalSpots    = plans.reduce((s, p) => s + p.lines.filter(l=>!l.frii).reduce((ss,l)=>ss+l.spots,0), 0);
+  const client        = plans[0].client;
+  const gFrom         = plans[0].gFrom;
+  const gTo           = plans[0].gTo;
+  const SCOLS         = ['var(--blue)','var(--amber)','var(--green)','var(--purple)'];
+  let h = '';
+
+  // ── Summary KPI card ──────────────────────────────────────────
+  const over = totalCost - totalBudget;
+  h += '<div class="card"><div class="ch">' + escH(client) + ' &middot; ' + gFrom + ' &rarr; ' + gTo + '</div><div class="cb">';
+  h += '<div class="kpis">';
+  h += '<div class="kpi ' + (over>0?'warn':'') + '"><div class="v">' + kr(totalCost) + '</div><div class="l">Heildarkostnaður</div></div>';
+  h += '<div class="kpi"><div class="v">' + kr(totalBudget) + '</div><div class="l">Fjárhagsáætlun</div></div>';
+  h += '<div class="kpi ' + (over>0?'warn':'ok') + '"><div class="v">' + (over>=0?'+':'') + kr(over) + '</div><div class="l">' + (over>0?'Yfir':'Eftir') + '</div></div>';
+  h += '<div class="kpi"><div class="v">' + krn(totalSpots) + '</div><div class="l">Greiddir spots</div></div>';
+  h += '</div>';
+  // Per-station summary chips
+  h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">';
+  plans.forEach((p, pi) => {
+    const col = SCOLS[pi % SCOLS.length];
+    h += '<div style="background:' + col + '18;border:1px solid ' + col + '44;border-radius:6px;padding:5px 10px">' +
+      '<span style="color:' + col + ';font-weight:600;font-size:11px">' + stationLabel(p.station) + '</span>' +
+      '<span style="color:var(--t3);font-family:var(--mono);font-size:10px;margin-left:6px">' + kr(p.grandCost) + ' / ' + kr(p.budget) + ' &middot; ' + Math.round(p.disc) + '% ' + (p.station==='Ras2'?'styrking':'afsl.') + '</span>' +
+    '</div>';
+  });
+  h += '</div></div></div>';
+
+  // ── Per-station sections ──────────────────────────────────────
+  plans.forEach((plan, pi) => {
+    const { station, budget, disc, validAds, lines, grandCost } = plan;
+    const col = SCOLS[pi % SCOLS.length];
+    const paidSpots = lines.filter(l=>!l.frii).reduce((s,l)=>s+l.spots,0);
+
+    // Dagleg skipulag per station
+    h += '<div class="card"><div class="ch" style="border-left:3px solid ' + col + '">' + stationLabel(station) + ' — Dagleg skipulag</div>';
+
+    // Ad cost summary chips
+    h += '<div style="display:flex;gap:6px;flex-wrap:wrap;padding:0 0 10px 0">';
+    validAds.forEach((a, ai) => {
+      const adLines  = lines.filter(l => l.ai === ai && !l.frii);
+      const adCost   = adLines.reduce((s, l) => s + l.lc, 0);
+      const adSpots  = adLines.reduce((s, l) => s + l.spots, 0);
+      const adCol    = AD_COLS[ai % AD_COLS.length];
+      h += '<div style="background:var(--s2);border:1px solid ' + adCol + '33;border-radius:7px;padding:6px 12px;min-width:120px">' +
+        '<div style="color:' + adCol + ';font-weight:600;font-size:11px;margin-bottom:2px">' + escH(a.name) + '</div>' +
+        '<div style="font-family:var(--mono);font-size:12px;color:var(--t1)">' + kr(adCost) + '</div>' +
+        '<div style="font-size:9px;color:var(--t3);margin-top:1px">' + a.sek + ' sek &middot; ' + Math.round(adSpots) + ' spots</div>' +
+      '</div>';
+    });
+    h += '</div>';
+
+    h += '<table class="tbl">';
+    h += '<tr><th>Auglýsing</th><th>Slot</th><th>Tímasvið</th><th>Dagar</th><th class="r">Fj/dag</th><th class="r">Spots</th><th class="r">Avg verð/spot</th><th class="r">Samtals</th></tr>';
+    let lastAd = null;
+    lines.forEach(l => {
+      if (l.ad !== lastAd && lastAd !== null) h += '<tr class="sep"><td colspan="8"></td></tr>';
+      lastAd = l.ad;
+      h += '<tr class="' + (l.frii?'frii':'') + '">' +
+        '<td style="color:' + (l.frii?'var(--green)':AD_COLS[l.ai%AD_COLS.length]) + '">' + escH(l.ad) + '</td>' +
+        '<td>' + escH(l.slot) + '</td>' +
+        '<td style="color:var(--t3)">' + l.time + '</td>' +
+        '<td style="color:var(--t3)">' + l.wd.length + '</td>' +
+        '<td class="r">' + l.fj + '</td>' +
+        '<td class="r">' + l.spots + '</td>' +
+        '<td class="r">' + (l.frii ? '- frí -' : kr(l.cpp)) + '</td>' +
+        '<td class="r">' + (l.frii ? '0 kr' : kr(l.lc)) + '</td></tr>';
+    });
+    h += '<tr class="tot"><td colspan="7">SAMTALS ' + station + '</td><td class="r">' + kr(grandCost) + '</td></tr>';
+    h += '</table></div>';
+
+    // Airdate preview per station
+    const rot2 = buildRotation(validAds, lines);
+    const friiDayCount = {};
+    const airSpots = [];
+    lines.forEach(line => {
+      line.wd.forEach(d => {
+        const key = d.toDateString(), rotKey = key+'|'+line.time;
+        if (line.frii) {
+          const capKey = key+'|'+line.time, used = friiDayCount[capKey]||0;
+          const btimes = slotBroadcastTimes(line.time, line.fj);
+          const maxFri = btimes.length;
+          if (used >= maxFri) return;
+          for (let f=used;f<maxFri;f++) airSpots.push({d,line,kl:btimes[f]});
+          friiDayCount[capKey] = maxFri;
+        } else {
+          if (rot2[rotKey]!==line.ai) return;
+          const de = line.dayEntries&&line.dayEntries.find(e=>e.d.toDateString()===key);
+          const dayFj = de?(de.fj||line.fj||1):(line.fj||1);
+          slotBroadcastTimes(line.time, dayFj).forEach(kl => airSpots.push({d,line,kl}));
+        }
+      });
+    });
+    airSpots.sort((a,b)=>{ const dd=a.d-b.d; return dd!==0?dd:(a.line.time||'').localeCompare(b.line.time||''); });
+
+    let airRows = '';
+    airSpots.forEach(({d,line,kl}) => {
+      const ds = String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear();
+      const dow = d.getDay();
+      const dayCol = dow===6?'var(--amber)':dow===0?'var(--purple)':'var(--t2)';
+      const dayNames=['Sun','Mán','Þri','Mið','Fim','Fös','Lau'];
+      const spotRate = getRateWithPremium(station, line.time, d, plan.adtype);
+      const spotPrice = line.frii ? 0 : station === 'Ras2'
+        ? Math.round((spotRate||0) * line.sek)
+        : Math.round((spotRate||0) * (1-disc/100) * line.sek);
+      airRows += '<tr>' +
+        '<td style="color:'+col+'">'+station+'</td>' +
+        '<td style="color:'+AD_COLS[line.ai%AD_COLS.length]+'">'+escH(line.ad)+'</td>' +
+        '<td style="color:'+dayCol+'">'+ds+'</td>' +
+        '<td style="color:'+dayCol+';font-weight:500">'+dayNames[dow]+'</td>' +
+        '<td style="color:var(--amber)">'+(kl||'')+'</td>' +
+        '<td class="r">'+line.sek+'</td>' +
+        '<td class="r" style="color:'+(line.frii?'var(--green)':'var(--t2)')+'">'+( line.frii?'frí':krn(spotPrice))+'</td>' +
+        '<td style="color:var(--green)">'+(line.frii?'frí':'')+'</td></tr>';
+    });
+
+    h += '<div class="card">' +
+      '<div class="ch" style="border-left:3px solid '+col+'">'+station+' — Airdate ('+airSpots.length+' raðir)' +
+      '<button class="btn bpu" style="font-size:10px;padding:3px 9px" onclick="genAirdateForStation(\''+station+'\')">&#x2B07; Airdate Excel</button></div>' +
+      '<div style="overflow-x:auto"><table class="tbl" style="table-layout:fixed;width:100%">' +
+      '<thead><tr style="background:var(--s2)"><th>Miðill</th><th>Nafn</th><th>Hefst</th><th>Dagur</th><th>Hefst kl</th><th class="r">Fjöldi</th><th class="r">Einingaverð</th><th>Frí</th></tr></thead>' +
+      '<tbody>'+airRows+'</tbody></table></div></div>';
+  });
+
+  // Email (first station or combined)
+  h += '<div class="card"><div class="ch">Tölvupóstur' +
+    '<button class="btn bo" style="font-size:10px;padding:3px 9px" onclick="copyEmail()">Afrita</button></div>' +
+    '<div class="ebody" id="email-body">' + escH(buildEmail(plans[0])) + '</div></div>';
+
+  pv.innerHTML = h;
+}
+
+// ── Download: Pontunarskjal (Yfirlit format for FMX/Syn) ──────────
+async function genPontunar() {
+  const plans = compute();
+  if (!plans) { toast('Fylltu inn kampaniuupplysingar'); return; }
+
+  // Sort Bylgjan first
+  const sorted = [...plans].sort((a,b) => a.station==='Bylgjan'?-1:b.station==='Bylgjan'?1:0);
+  const wb = new ExcelJS.Workbook();
+  const client = sorted[0].client || 'kampania';
+  const gFrom  = sorted[0].gFrom;
+
+  for (const plan of sorted) {
+    await genPontunarTab(wb, plan);
+  }
+
+  const buf  = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a'); a.href=url;
+  a.download = (client).replace(/[^a-zA-Z0-9_-]/g,'_')+'_Pontunarskjal_'+gFrom+'.xlsx';
+  a.click(); URL.revokeObjectURL(url);
+  toast('Pöntunarskjal sótt — Bylgjan + FMX!');
+}
+
+async function genPontunarForPlan(plan) {
+  // Single-plan export (used from per-station button)
+  const wb = new ExcelJS.Workbook();
+  await genPontunarTab(wb, plan);
+  const { station, gFrom, client } = plan;
+  const buf=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url;
+  a.download=(client||'kampania').replace(/[^a-zA-Z0-9_-]/g,'_')+'_Pontunarskjal_'+station+'_'+gFrom+'.xlsx';
+  a.click(); URL.revokeObjectURL(url);
+  toast('Pöntunarskjal sótt - '+station+'!');
+}
+
+async function genPontunarTab(wb, plan) {
+  const { station, disc, gFrom, client, validAds, lines } = plan;
+  const dr    = disc / 100;
+  const drPct = Math.round(dr * 100);
+  const rot   = buildRotation(validAds, lines);
+
+  const spotRows = [], friiCap = {};
+  lines.forEach(line => {
+    line.wd.forEach(d => {
+      const key = d.toDateString(), rotKey = key+'|'+line.time;
+      if (line.frii) {
+        const ck = key+'|'+line.time, used = friiCap[ck]||0, max = line.fj||2;
+        if (used >= max) return;
+        for (let f=used;f<max;f++) spotRows.push({d,line,isFri:true});
+        friiCap[ck] = max;
+      } else {
+        if (rot[rotKey]!==line.ai) return;
+        const de = line.dayEntries&&line.dayEntries.find(e=>e.d.toDateString()===key);
+        const fj = Math.max(1,(de?.fj)||line.fj||1);
+        for (let f=0;f<fj;f++) spotRows.push({d,line,isFri:false});
+      }
+    });
+  });
+  spotRows.sort((a,b)=>{ const dd=a.d-b.d; return dd!==0?dd:(a.line.time||'').localeCompare(b.line.time||''); });
+
+  const totGV = spotRows.reduce((s,{d,line,isFri})=>isFri?s:s+(getRateWithPremium(station,line.time,d,plan.adtype)||0)*line.sek,0);
+  const totV  = spotRows.reduce((s,{d,line,isFri})=>isFri?s:s+Math.round((getRateWithPremium(station,line.time,d,plan.adtype)||0)*line.sek*(1-dr)),0);
+
+  const ws = wb.addWorksheet(station);
+  ws.columns = [{width:5},{width:10},{width:13},{width:14},{width:9},{width:7},{width:7},{width:44},{width:13},{width:13},{width:9},{width:6},{width:11},{width:13},{width:11},{width:11}];
+
+  const fN  = {name:'Calibri',size:10};
+  const fB  = {name:'Calibri',size:10,bold:true};
+  const fW  = {name:'Calibri',size:10,bold:true,color:{argb:'FFFFFFFF'}};
+  const fBl = {name:'Calibri',size:10,bold:true,color:{argb:'FF1F497D'}};
+  const fGr = {name:'Calibri',size:10,bold:true,color:{argb:'FF999999'}};
+  const aL={horizontal:'left'}, aR={horizontal:'right'};
+  const thn=(c='FFD0D0D0')=>({style:'thin',color:{argb:c}});
+  const dot={style:'dotted',color:{argb:'FF888888'}};
+  const fill=a=>({type:'pattern',pattern:'solid',fgColor:{argb:a}});
+
+  // Row 1 – Samtals
+  const sr=ws.addRow(['Samtals','','','','',spotRows.length,'','','','',spotRows.filter(r=>!r.isFri).length,'',Math.round(totGV),drPct+'%','',totV]);
+  sr.height=15;
+  sr.eachCell({includeEmpty:true},(c,n)=>{ c.fill=fill('FFDCE6F1'); c.font=n===16?fBl:fB; c.border={top:thn('FFB0C4DE'),bottom:thn('FFB0C4DE'),left:thn('FFB0C4DE'),right:thn('FFB0C4DE')}; c.alignment=n>9?aR:aL; });
+  sr.getCell(13).numFmt='#,##0'; sr.getCell(16).numFmt='#,##0';
+
+  // Row 2 – blank
+  ws.addRow([]);
+
+  // Row 3 – Header
+  const hr=ws.addRow(['#','Fjölmiðill','Dags','Tími','Staðsetning','Magn','Eining','Auglýsing','Athugasemd','Einingaverð','Stuðull','Álag','Grunnverð','Grunnafsl.%','Aukaafsl.%','Verð']);
+  hr.height=15;
+  hr.eachCell({includeEmpty:true},(c,n)=>{ c.fill=fill('FF4F81BD'); c.font=fW; c.border={top:thn('FF2E5F8A'),bottom:thn('FF2E5F8A'),left:thn('FF2E5F8A'),right:thn('FF2E5F8A')}; c.alignment=n<=9?aL:aR; });
+  hr.getCell(14).fill=fill('FF375623');
+
+  // Data rows
+  let rn=1, prevDate=null;
+  spotRows.forEach(({d,line,isFri},idx)=>{
+    const rps=isFri?0:(getRateWithPremium(station,line.time,d,plan.adtype)||0);
+    const gv=Math.round(rps*line.sek);
+    const verd=isFri?0:Math.round(gv*(1-dr));
+    const ds=String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear();
+    const chg=prevDate&&ds!==prevDate;
+    const row=ws.addRow([rn++,station,ds,line.time,'Any',line.sek,'sek',line.ad,'',isFri?0:rps,'100%','0%',isFri?0:gv,isFri?'100%':drPct+'%','',verd]);
+    row.height=14;
+    const bg=isFri?'FFE8F5EE':(idx%2===0?'FFFFFFFF':'FFE8F0FB');
+    const topB=chg?dot:thn('FFE8E8E8');
+    row.eachCell({includeEmpty:true},(c,n)=>{
+      c.fill=fill(bg);
+      c.font=n===16?(isFri?fGr:fB):fN;
+      c.border={top:topB,bottom:thn('FFE8E8E8'),left:thn(),right:thn()};
+      c.alignment=(n<=4||n===7||n===8||n===9)?aL:aR;
+    });
+    row.getCell(14).fill=fill('FFE2EFDA');
+    if (!isFri) { row.getCell(10).numFmt='#,##0'; row.getCell(13).numFmt='#,##0'; row.getCell(16).numFmt='#,##0'; }
+    prevDate=ds;
+  });
+
+  ws.autoFilter={from:{row:3,column:1},to:{row:3,column:16}};
+  ws.views=[{state:'frozen',xSplit:0,ySplit:3}];
+  // wb and download handled by caller
+}
+
+// ── Download: Airdate flat list (matches screenshot format) ───────
+function genAirdate() {
+  const plans = compute();
+  if (!plans) { toast('Fylltu inn kampaniuupplysingar'); return; }
+  const sorted = [...plans].sort((a,b) => a.station==='Bylgjan'?-1:b.station==='Bylgjan'?1:0);
+  const wb     = XLSX.utils.book_new();
+  const client = sorted[0].client || 'kampania';
+  const gFrom  = sorted[0].gFrom;
+  sorted.forEach(plan => genAirdateTab(wb, plan));
+  const fname  = client.replace(/[^a-zA-Z0-9_-]/g,'_')+'_Airdate_'+gFrom+'.xlsx';
+  XLSX.writeFile(wb, fname);
+  toast('Airdate Excel sótt — Bylgjan + FMX!');
+}
+
+function genAirdateForStation(stationId) {
+  const plans = compute();
+  if (!plans) { toast('Fylltu inn kampaniuupplysingar'); return; }
+  const plan = plans.find(p => p.station === stationId);
+  if (!plan) return;
+  const wb = XLSX.utils.book_new();
+  genAirdateTab(wb, plan);
+  const fname = (plan.client||'kampania').replace(/[^a-zA-Z0-9_-]/g,'_')+'_Airdate_'+stationId+'_'+plan.gFrom+'.xlsx';
+  XLSX.writeFile(wb, fname);
+  toast('Airdate Excel sótt — '+stationId+'!');
+}
+
+function genAirdateTab(wb, plan) {
+  const { station, lines, client, gFrom, grandCost, disc: discPct, adtype } = plan;
+  const plan_disc = discPct / 100;
+  const rot = buildRotation(plan.validAds, plan.lines);
+
+  // Header row — exact column names from Airdate screenshot
+  const header = ['Midill','Nafn','Hefst','Hefst kl','Endar','Lysing','Fjoldi','Eining','Einingaverd','GRP','Verd (GRP)','Fri'];
+  const rows = [header];
+
+  // Collect all spots, then sort by date → time
+  const spots = [];
+  const friiDayCountX = {};
+  lines.forEach(line => {
+    line.wd.forEach(d => {
+      const key    = d.toDateString();
+      const rotKey = key + '|' + line.time;
+      const ai     = line.ai;
+      if (line.frii) {
+        const capKey = key + '|' + line.time;
+        const used   = friiDayCountX[capKey] || 0;
+        const btimes = slotBroadcastTimes(line.time, line.fj);
+        const maxFri = btimes.length;
+        if (used >= maxFri) return;
+        for (let f = used; f < maxFri; f++) spots.push({ d, line, kl: btimes[f] });
+        friiDayCountX[capKey] = maxFri;
+      } else {
+        const emit = rot[rotKey] === ai;
+        if (!emit) return;
+        const de  = line.dayEntries ? line.dayEntries.find(e => e.d.toDateString() === key) : null;
+        const dayFj = de ? (de.fj || line.fj || 1) : (line.fj || 1);
+        const btimes = slotBroadcastTimes(line.time, dayFj);
+        btimes.forEach(kl => spots.push({ d, line, kl }));
+      }
+    });
+  });
+  spots.sort((a, b) => {
+    const dd = a.d - b.d;
+    if (dd !== 0) return dd;
+    return (a.line.time || '').localeCompare(b.line.time || '');
+  });
+
+  spots.forEach(({ d, line, kl }) => {
+    const dateStr = String(d.getDate()).padStart(2,'0') + '.' +
+                    String(d.getMonth()+1).padStart(2,'0') + '.' +
+                    d.getFullYear();
+    const spotRate  = getRateWithPremium(station, line.time, d, plan.adtype);
+    const spotPrice = line.frii ? 0 : station === 'Ras2'
+      ? Math.round((spotRate || 0) * line.sek)
+      : Math.round((spotRate || 0) * (1 - plan_disc) * line.sek);
+    rows.push([
+      station,
+      line.ad,
+      dateStr,
+      kl || '',
+      '',
+      '',
+      line.sek,        // Fjöldi = seconds
+      'sek',           // Eining
+      spotPrice,       // Einingaverð = rate × sek × (1-disc)
+      0,               // GRP
+      0,               // Verð (GRP)
+      line.frii ? 1 : 0
+    ]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  // Column widths to match Airdate layout
+  ws['!cols'] = [
+    {wch:8},  // Midill
+    {wch:36}, // Nafn
+    {wch:12}, // Hefst
+    {wch:10}, // Hefst kl
+    {wch:10}, // Endar
+    {wch:10}, // Lysing
+    {wch:7},  // Fjoldi
+    {wch:8},  // Eining
+    {wch:12}, // Einingaverd
+    {wch:8},  // GRP
+    {wch:10}, // Verd (GRP)
+    {wch:6},  // Fri
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, station);
+  // download handled by caller
+}
+
+// ── PDF ───────────────────────────────────────────────────────────
+function genPDF() {
+  const plan = compute();
+  if (!plan) { toast('Fylltu inn kampaniuupplysingar'); return; }
+  const { station, budget, disc, gFrom, gTo, client, validAds, lines, grandCost } = plan;
+  const over      = grandCost - budget;
+  const paidSpots = lines.filter(l => !l.frii).reduce((s, l) => s + l.spots, 0);
+
+  const adRows = validAds.map((a, i) =>
+    '<tr><td style="color:' + AD_PRINT[i % AD_PRINT.length] + ';font-weight:700">' + a.name + '</td>' +
+    '<td>' + a.sek + ' sek</td><td>' + a.pct + '%</td>' +
+    '<td>' + (a.from || gFrom) + ' - ' + (a.to || gTo) + '</td>' +
+    '<td style="text-align:right;font-family:monospace">' + kr(budget * (a.pct / 100)) + '</td></tr>'
+  ).join('');
+
+  let lastAd2 = null;
+  const lineRows = lines.map(l => {
+    let sep = '';
+    if (l.ad !== lastAd2 && lastAd2 !== null) sep = '<tr style="height:4px;background:#f0f0f0"><td colspan="8"></td></tr>';
+    lastAd2 = l.ad;
+    return sep + '<tr style="' + (l.frii ? 'color:#2a7a40;font-style:italic' : '') + '">' +
+      '<td style="color:' + (l.frii ? '#2a7a40' : AD_PRINT[l.ai % AD_PRINT.length]) + ';font-weight:600">' + l.ad + '</td>' +
+      '<td>' + l.slot + '</td>' +
+      '<td style="font-family:monospace;color:#666;font-size:10px">' + l.time + '</td>' +
+      '<td style="color:#666">' + l.from + ' - ' + l.to + '</td>' +
+      '<td style="text-align:right">' + l.fj + '</td>' +
+      '<td style="text-align:right">' + l.spots + '</td>' +
+      '<td style="text-align:right;font-family:monospace">' + (l.frii ? '- fri -' : kr(l.cpp)) + '</td>' +
+      '<td style="text-align:right;font-family:monospace;font-weight:700">' + (l.frii ? '0 kr' : kr(l.lc)) + '</td>' +
+      '</tr>';
+  }).join('');
+
+  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + client + '</title>' +
+    '<style>body{font-family:"Helvetica Neue",Arial,sans-serif;font-size:11px;color:#111;margin:0;padding:36px 44px;line-height:1.4}' +
+    'h1{font-size:22px;font-weight:700;letter-spacing:-.5px;margin:0 0 3px}' +
+    '.sub{font-size:11px;color:#666;font-family:monospace;margin-bottom:24px}' +
+    '.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px}' +
+    '.kpi{background:#f2f5ff;border-radius:8px;padding:10px 13px}' +
+    '.kpi .v{font-size:15px;font-weight:700;font-family:monospace;color:#1a4ab0}' +
+    '.kpi .l{font-size:9px;color:#888;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}' +
+    'h2{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#888;margin:20px 0 7px}' +
+    'table{width:100%;border-collapse:collapse;margin-bottom:20px}' +
+    'th{padding:6px 9px;background:#edf0ff;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#555;text-align:left}' +
+    'th.r{text-align:right}td{padding:6px 9px;border-bottom:1px solid #edf0f8;font-size:11px}' +
+    '.tot td{font-weight:700;color:#1a4ab0;background:#f0f4ff;border-top:2px solid #c4cef8}' +
+    '.foot{margin-top:28px;padding-top:12px;border-top:1px solid #eee;font-size:9px;color:#bbb;display:flex;justify-content:space-between}' +
+    '@media print{body{padding:20px 26px}}</style></head><body>' +
+    '<h1>' + client + '</h1>' +
+    '<div class="sub">' + station + '  &middot;  ' + gFrom + ' - ' + gTo + '  &middot;  ' + disc + '% afslattr</div>' +
+    '<div class="kpis">' +
+    '<div class="kpi"><div class="v">' + kr(grandCost) + '</div><div class="l">Heildarkostnadur</div></div>' +
+    '<div class="kpi"><div class="v">' + kr(budget) + '</div><div class="l">Fjarhagsaetlun</div></div>' +
+    '<div class="kpi"><div class="v" style="color:' + (over > budget * .05 ? '#b05000' : '#1a7a40') + '">' + (over >= 0 ? '+' : '') + kr(over) + '</div><div class="l">' + (over > 0 ? 'Yfir' : 'Eftir') + '</div></div>' +
+    '<div class="kpi"><div class="v">' + krn(paidSpots) + '</div><div class="l">Greiddir spots</div></div>' +
+    '</div>' +
+    '<h2>Auglysingar</h2>' +
+    '<table><tr><th>Nafn</th><th>Lengd</th><th>Hlutfall</th><th>Timabil</th><th class="r">Fjarhagsaetlun</th></tr>' + adRows + '</table>' +
+    '<h2>Dagleg skipulag</h2>' +
+    '<table><tr><th>Auglysing</th><th>Slot</th><th>Timasvid</th><th>Dagsetningar</th><th class="r">Fj/dag</th><th class="r">Spots</th><th class="r">Verd/spot</th><th class="r">Samtals</th></tr>' +
+    lineRows +
+    '<tr class="tot"><td colspan="7">SAMTALS</td><td style="text-align:right;font-family:monospace">' + kr(grandCost) + '</td></tr></table>' +
+    '<div class="foot"><span>Utbuid ' + new Date().toLocaleDateString('is-IS') + '</span><span>' + station + ' &middot; ' + disc + '% afslattr</span></div>' +
+    '</body></html>';
+
+  const w = window.open('', '_blank');
+  if (!w) { toast('Leyfdu popup-glugga til ad saekja PDF'); return; }
+  w.document.write(html); w.document.close();
+  setTimeout(() => w.print(), 500);
+  toast('Prentgluggi opnadur - veldu Vista sem PDF');
+}
+
+// ── Copy email ────────────────────────────────────────────────────
+function copyEmail() {
+  const el = document.getElementById('email-body');
+  if (!el) { toast('Engar kampaniuupplysingar'); return; }
+  navigator.clipboard.writeText(el.textContent)
+    .then(() => toast('Tolvupostur afritadur!'))
+    .catch(() => toast('Villa - afritadu handvirkt'));
+}
+
+// ── Tab system ────────────────────────────────────────────────────
+function defaultTabState() {
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth();
+  const mm  = String(m + 1).padStart(2,'0');
+  const last = new Date(y, m + 1, 0).getDate();
+  return {
+    client: '',
+    station: 'FMX',
+    adtype: 'Leikid',
+    budget: '200.000',
+    disc: '50',
+    start: '01/' + mm + '/' + y,
+    end:   String(last).padStart(2,'0') + '/' + mm + '/' + y,
+    ads: [{name:'',sek:'',pct:'',from:'',to:''}],
+    slots: [
+      {time:'07:00-09:00', label:'Morgunn',      frii:false, fj:1, fjDays:defaultFjDays(), days:defaultDays()},
+      {time:'09:15-11:15', label:'Fyrir hadegi', frii:false, fj:1, fjDays:defaultFjDays(), days:defaultDays()},
+      {time:'11:45-13:00', label:'Hadegi',       frii:false, fj:1, fjDays:defaultFjDays(), days:defaultDays()},
+      {time:'13:15-15:45', label:'Eftir hadegi', frii:false, fj:1, fjDays:defaultFjDays(), days:defaultDays()},
+      {time:'16:00-18:30', label:'Siddegi',      frii:false, fj:1, fjDays:defaultFjDays(), days:defaultDays()},
+      {time:'19:00-00:00', label:'Kvold II',     frii:true,  fj:2, fjDays:[2,2,2,2,2,2,2], include:true, days:defaultDays()},
+    ]
+  };
+}
+
+let TABS = [ { name: 'Áætlun 1', state: defaultTabState() } ];
+let ACTIVE_TAB = 0;
+
+function saveCurrentTab() {
+  if (!TABS[ACTIVE_TAB]) return;
+  TABS[ACTIVE_TAB].state = {
+    client:   document.getElementById('f-client').value,
+    adtype:   document.getElementById('f-type').value,
+    budget:   document.getElementById('f-budget').value,
+    start:    document.getElementById('f-start').value,
+    end:      document.getElementById('f-end').value,
+    ads:      JSON.parse(JSON.stringify(ADS)),
+    slots:    JSON.parse(JSON.stringify(SLOTS)),
+    alag:     JSON.parse(JSON.stringify(ALAG)),
+    stations: JSON.parse(JSON.stringify(STATIONS)),
+  };
+  persistTabs();
+}
+
+function persistTabs() {
+  try {
+    localStorage.setItem('fmx_tabs', JSON.stringify(TABS));
+    localStorage.setItem('fmx_active', ACTIVE_TAB);
+  } catch(e) {}
+}
+
+function loadPersistedTabs() {
+  try {
+    const raw = localStorage.getItem('fmx_tabs');
+    const act = localStorage.getItem('fmx_active');
+    if (!raw) return false;
+    const tabs = JSON.parse(raw);
+    if (!tabs || !tabs.length) return false;
+    TABS = tabs;
+    ACTIVE_TAB = Math.min(+act || 0, TABS.length - 1);
+    return true;
+  } catch(e) { return false; }
+}
+
+function loadTab(idx) {
+  saveCurrentTab();
+  ACTIVE_TAB = idx;
+  const s = TABS[idx].state;
+  document.getElementById('f-client').value  = s.client  || '';
+  document.getElementById('f-type').value    = s.adtype  || 'Leikid';
+  document.getElementById('f-budget').value  = s.budget || '200.000';
+  document.getElementById('f-start').value   = s.start   || '';
+  document.getElementById('f-end').value     = s.end     || '';
+  ADS      = JSON.parse(JSON.stringify(s.ads));
+  SLOTS    = JSON.parse(JSON.stringify(s.slots));
+  ALAG = JSON.parse(JSON.stringify(s.alag || {}));
+  STATIONS = JSON.parse(JSON.stringify(s.stations || STATIONS));
+  renderAds();
+  renderSlots();
+  renderAlag();
+  renderStations();
+  renderTabs();
+  updateMasterBar();
+  refresh(false);
+}
+
+function renderTabs() {
+  const bar = document.getElementById('tabbar');
+  bar.innerHTML = '';
+  TABS.forEach((tab, i) => {
+    const isActive = i === ACTIVE_TAB;
+    const el = document.createElement('div');
+    el.className = 'tab' + (isActive ? ' active' : '');
+    el.title = isActive ? 'Smelltu á nafnið til að endurnefna' : '';
+    el.innerHTML =
+      '<span id="tabn-' + i + '" style="outline:none;cursor:' + (isActive ? 'text' : 'pointer') + '">' + escH(tab.name) + '</span>' +
+      (isActive ? '<span style="color:var(--t3);font-size:9px;opacity:.5;margin-left:1px">✎</span>' : '') +
+      '<span title="Afrita tab" onclick="copyTab(' + i + ')" style="color:var(--t3);font-size:10px;margin-left:3px;cursor:pointer;opacity:.5" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.5">⎘</span>' +
+      (TABS.length > 1 ? '<span class="tcl" onclick="closeTab(' + i + ')">×</span>' : '');
+    el.addEventListener('click', e => {
+      if (e.target.classList.contains('tcl')) return;
+      if (i === ACTIVE_TAB) {
+        renameTab(i);
+      } else {
+        loadTab(i);
+      }
+    });
+    bar.appendChild(el);
+  });
+  const add = document.createElement('button');
+  add.className = 'tab-add';
+  add.textContent = '+ Ný áætlun';
+  add.onclick = addTab;
+  bar.appendChild(add);
+}
+
+function copyTab(i) {
+  saveCurrentTab();
+  const copy = JSON.parse(JSON.stringify(TABS[i]));
+  copy.name = TABS[i].name + ' - afrit';
+  TABS.splice(i + 1, 0, copy);
+  loadTab(i + 1);
+}
+
+function addTab() {
+  saveCurrentTab();
+  TABS.push({ name: 'Áætlun ' + (TABS.length + 1), state: defaultTabState() });
+  loadTab(TABS.length - 1);
+}
+
+function closeTab(i) {
+  if (TABS.length === 1) return;
+  TABS.splice(i, 1);
+  const next = Math.min(ACTIVE_TAB, TABS.length - 1);
+  ACTIVE_TAB = -1; // prevent saveCurrentTab overwriting
+  loadTab(next);
+}
+
+function renameTab(i) {
+  const span = document.getElementById('tabn-' + i);
+  if (!span) return;
+  span.contentEditable = 'true';
+  span.focus();
+  const range = document.createRange();
+  range.selectNodeContents(span);
+  window.getSelection().removeAllRanges();
+  window.getSelection().addRange(range);
+  function done() {
+    span.contentEditable = 'false';
+    TABS[i].name = span.textContent.trim() || ('Áætlun ' + (i + 1));
+    span.textContent = TABS[i].name;
+    span.removeEventListener('blur', done);
+    span.removeEventListener('keydown', onKey);
+  }
+  function onKey(e) { if (e.key === 'Enter') { e.preventDefault(); span.blur(); } }
+  span.addEventListener('blur', done);
+  span.addEventListener('keydown', onKey);
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+(function init() {
+  const hadData = loadPersistedTabs();
+  const s = TABS[ACTIVE_TAB].state;
+  document.getElementById('f-client').value  = s.client  || '';
+  document.getElementById('f-type').value    = s.adtype  || 'Leikid';
+  document.getElementById('f-budget').value  = s.budget  || '';
+  document.getElementById('f-start').value   = s.start   || '';
+  document.getElementById('f-end').value     = s.end     || '';
+  ADS      = JSON.parse(JSON.stringify(s.ads   || [{name:'',sek:'',pct:'',from:'',to:''}]));
+  SLOTS    = JSON.parse(JSON.stringify(s.slots || []));
+  ALAG     = JSON.parse(JSON.stringify(s.alag  || {}));
+  STATIONS = JSON.parse(JSON.stringify(s.stations || STATIONS));
+  renderAds();
+  renderSlots();
+  renderAlag();
+  renderStations();
+  renderTabs();
+  initMobile();
+  updateMasterBar();
+  // If we had saved data, skip homepage and go straight to app
+  if (hadData && s.client) {
+    document.getElementById('homepage').style.display = 'none';
+    const app = document.getElementById('topbar');
+    app.style.display = 'flex';
+    refresh(false);
+  }
+})();
+</script>
+</body>
+</html>
